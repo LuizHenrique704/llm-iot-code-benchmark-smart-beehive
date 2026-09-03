@@ -21,10 +21,14 @@ API_PROVIDER = "OpenRouter"
 
 MODEL = "poolside/laguna-s-2.1:free"
 
+# Nome usado dentro de results/
 RESULT_MODEL_NAME = "laguna-s-2.1-free"
 
 MAX_OUTPUT_TOKENS = 16384
+
+# Padronização do benchmark
 TEMPERATURE = 0.0
+
 
 # ============================================================
 # LOCALIZAÇÃO DA RAIZ DO PROJETO
@@ -34,9 +38,15 @@ def find_project_root() -> Path:
     """
     Localiza automaticamente a raiz do projeto.
 
-    Isso permite manter este arquivo em:
+    Estrutura esperada:
 
-    llms/deepseek/deepseek.py
+    projeto/
+    ├── .env
+    ├── prompts/
+    ├── results/
+    └── llms/
+        └── laguna/
+            └── laguna.py
     """
 
     current = Path(__file__).resolve().parent
@@ -50,38 +60,22 @@ def find_project_root() -> Path:
         has_project_marker = (
             (directory / ".env").exists()
             or (directory / ".git").exists()
-            or (
-                directory
-                / "requirements.txt"
-            ).exists()
+            or (directory / "requirements.txt").exists()
         )
 
-        if (
-            has_prompts
-            and has_project_marker
-        ):
+        if has_prompts and has_project_marker:
             return directory
 
     raise RuntimeError(
-        "Não foi possível localizar a raiz "
-        "do projeto. Verifique se a pasta "
-        "prompts/ existe na raiz."
+        "Não foi possível localizar a raiz do projeto."
     )
 
 
 PROJECT_ROOT = find_project_root()
 
-ENV_FILE = (
-    PROJECT_ROOT / ".env"
-)
-
-PROMPTS_DIR = (
-    PROJECT_ROOT / "prompts"
-)
-
-RESULTS_DIR = (
-    PROJECT_ROOT / "results"
-)
+ENV_FILE = PROJECT_ROOT / ".env"
+PROMPTS_DIR = PROJECT_ROOT / "prompts"
+RESULTS_DIR = PROJECT_ROOT / "results"
 
 
 # ============================================================
@@ -90,11 +84,7 @@ RESULTS_DIR = (
 
 def sha256_text(text: str) -> str:
     """
-    Calcula SHA-256.
-
-    Permite verificar posteriormente
-    se prompt, resposta ou código
-    foram alterados.
+    Calcula SHA-256 de um texto.
     """
 
     return hashlib.sha256(
@@ -102,48 +92,35 @@ def sha256_text(text: str) -> str:
     ).hexdigest()
 
 
-def read_prompt(
-    prompt_path: Path
-) -> str:
+def read_prompt(path: Path) -> str:
     """
-    Lê o prompt armazenado em arquivo.
+    Lê um arquivo de prompt.
     """
 
-    if not prompt_path.exists():
+    if not path.exists():
 
         print()
-        print(
-            "ERRO: prompt não encontrado:"
-        )
-        print(prompt_path)
+        print("ERRO: prompt não encontrado:")
+        print(path)
 
         sys.exit(1)
 
-    return prompt_path.read_text(
+    return path.read_text(
         encoding="utf-8"
     )
 
 
-def extract_code(
-    response: str
-) -> str:
+def extract_code(text: str):
     """
-    Extrai código da resposta.
+    Extrai código de um bloco Markdown.
 
-    Se a LLM retornar:
-
-    ```cpp
-    código
-    ```
-
-    as marcações Markdown são removidas
-    somente do code.ino.
-
-    response.txt permanece exatamente
-    com a resposta recebida da API.
+    Retorna:
+    - código extraído;
+    - True se encontrou bloco de código;
+    - False caso contrário.
     """
 
-    response = response.strip()
+    text = text.strip()
 
     pattern = (
         r"```(?:cpp|c\+\+|arduino|ino)?"
@@ -152,27 +129,29 @@ def extract_code(
 
     match = re.search(
         pattern,
-        response,
+        text,
         flags=(
             re.IGNORECASE
             | re.DOTALL
-        )
+        ),
     )
 
     if match:
+
         return (
-            match
-            .group(1)
-            .strip()
+            match.group(1).strip(),
+            True,
         )
 
-    return response
+    return (
+        text,
+        False,
+    )
 
 
 def object_to_dict(obj):
     """
-    Converte objetos retornados pelo
-    SDK para dicionário quando possível.
+    Converte objetos do SDK OpenAI em dicionário.
     """
 
     if obj is None:
@@ -185,6 +164,7 @@ def object_to_dict(obj):
 
         try:
             return obj.model_dump()
+
         except Exception:
             pass
 
@@ -192,6 +172,7 @@ def object_to_dict(obj):
 
         try:
             return obj.dict()
+
         except Exception:
             pass
 
@@ -203,7 +184,7 @@ def get_nested_value(
     *keys
 ):
     """
-    Busca valores em dicionários aninhados.
+    Obtém um valor dentro de dicionários aninhados.
     """
 
     current = data
@@ -216,7 +197,9 @@ def get_nested_value(
         ):
             return None
 
-        current = current.get(key)
+        current = current.get(
+            key
+        )
 
         if current is None:
             return None
@@ -224,25 +207,40 @@ def get_nested_value(
     return current
 
 
-# ============================================================
-# CHAMADA DA API
-# ============================================================
-
-def run_deepseek(
-    prompt: str
-):
+def relative_path(path: Path) -> str:
     """
-    Executa o DeepSeek V4 Flash através
-    do OpenRouter utilizando streaming.
+    Retorna caminho relativo à raiz do projeto.
+    """
 
-    Retorna:
+    try:
 
-    - texto completo;
-    - informações de uso;
-    - latência total;
-    - latência até o primeiro conteúdo;
-    - ID da resposta;
-    - modelo efetivamente retornado.
+        return str(
+            path.relative_to(
+                PROJECT_ROOT
+            )
+        )
+
+    except ValueError:
+
+        return str(path)
+
+
+# ============================================================
+# EXECUÇÃO DO LAGUNA
+# ============================================================
+
+def run_laguna(prompt: str):
+    """
+    Executa Laguna S 2.1 através do OpenRouter.
+
+    O Laguna pode devolver sua saída em:
+
+    - delta.content
+    - delta.reasoning
+
+    Por isso os dois campos são coletados separadamente.
+
+    Não há retry automático.
     """
 
     load_dotenv(
@@ -256,33 +254,25 @@ def run_deepseek(
     if not api_key:
 
         print()
-
         print(
             "ERRO: OPENROUTER_API_KEY "
-            "não encontrada."
-        )
-
-        print()
-
-        print(
-            f"Verifique o arquivo: "
-            f"{ENV_FILE}"
+            "não encontrada no .env"
         )
 
         sys.exit(1)
 
-    # ========================================================
-    # CLIENTE OPENROUTER
-    # ========================================================
-
     client = OpenAI(
-        base_url=(
-            "https://openrouter.ai/api/v1"
-        ),
+        base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
     )
 
-    response_parts = []
+    # ========================================================
+    # RESPOSTAS
+    # ========================================================
+
+    content_parts = []
+
+    reasoning_parts = []
 
     usage = None
 
@@ -290,7 +280,11 @@ def run_deepseek(
 
     returned_model = None
 
+    system_fingerprint = None
+
     first_content_time = None
+
+    first_reasoning_time = None
 
     start_time = (
         time.perf_counter()
@@ -298,24 +292,42 @@ def run_deepseek(
 
     try:
 
-        stream = client.chat.completions.create(
-    model=MODEL,
-    messages=[
-        {
-            "role": "user",
-            "content": prompt,
-        }
-    ],
-    max_tokens=MAX_OUTPUT_TOKENS,
-    temperature=TEMPERATURE,
-    stream=True,
-)
+        stream = (
+            client
+            .chat
+            .completions
+            .create(
+
+                model=MODEL,
+
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    }
+                ],
+
+                max_tokens=(
+                    MAX_OUTPUT_TOKENS
+                ),
+
+                temperature=(
+                    TEMPERATURE
+                ),
+
+                stream=True,
+
+                stream_options={
+                    "include_usage": True
+                },
+            )
+        )
 
         for chunk in stream:
 
-            # ================================================
-            # ID DA RESPOSTA
-            # ================================================
+            # =================================================
+            # ID
+            # =================================================
 
             chunk_id = getattr(
                 chunk,
@@ -326,9 +338,9 @@ def run_deepseek(
             if chunk_id:
                 response_id = chunk_id
 
-            # ================================================
+            # =================================================
             # MODELO RETORNADO
-            # ================================================
+            # =================================================
 
             chunk_model = getattr(
                 chunk,
@@ -341,9 +353,25 @@ def run_deepseek(
                     chunk_model
                 )
 
-            # ================================================
-            # TOKENS / USAGE
-            # ================================================
+            # =================================================
+            # SYSTEM FINGERPRINT
+            # =================================================
+
+            fingerprint = getattr(
+                chunk,
+                "system_fingerprint",
+                None
+            )
+
+            if fingerprint is not None:
+
+                system_fingerprint = (
+                    fingerprint
+                )
+
+            # =================================================
+            # USAGE
+            # =================================================
 
             chunk_usage = getattr(
                 chunk,
@@ -354,9 +382,9 @@ def run_deepseek(
             if chunk_usage is not None:
                 usage = chunk_usage
 
-            # ================================================
-            # CONTEÚDO
-            # ================================================
+            # =================================================
+            # CHOICES
+            # =================================================
 
             choices = getattr(
                 chunk,
@@ -364,6 +392,7 @@ def run_deepseek(
                 None
             )
 
+            # O último chunk pode conter somente usage.
             if not choices:
                 continue
 
@@ -376,27 +405,49 @@ def run_deepseek(
             if delta is None:
                 continue
 
+            # =================================================
+            # CONTENT
+            # =================================================
+
             content = getattr(
                 delta,
                 "content",
                 None
             )
 
-            if not content:
-                continue
+            if content:
 
-            if (
-                first_content_time
-                is None
-            ):
+                if first_content_time is None:
 
-                first_content_time = (
-                    time.perf_counter()
+                    first_content_time = (
+                        time.perf_counter()
+                    )
+
+                content_parts.append(
+                    content
                 )
 
-            response_parts.append(
-                content
+            # =================================================
+            # REASONING
+            # =================================================
+
+            reasoning = getattr(
+                delta,
+                "reasoning",
+                None
             )
+
+            if reasoning:
+
+                if first_reasoning_time is None:
+
+                    first_reasoning_time = (
+                        time.perf_counter()
+                    )
+
+                reasoning_parts.append(
+                    reasoning
+                )
 
         end_time = (
             time.perf_counter()
@@ -407,22 +458,27 @@ def run_deepseek(
         client.close()
 
     # ========================================================
-    # RESPOSTA FINAL
+    # MONTA TEXTOS
     # ========================================================
 
-    response_text = "".join(
-        response_parts
+    content_text = "".join(
+        content_parts
     )
+
+    reasoning_text = "".join(
+        reasoning_parts
+    )
+
+    # ========================================================
+    # LATÊNCIA
+    # ========================================================
 
     total_latency = (
         end_time
         - start_time
     )
 
-    if (
-        first_content_time
-        is not None
-    ):
+    if first_content_time is not None:
 
         first_content_latency = (
             first_content_time
@@ -433,33 +489,56 @@ def run_deepseek(
 
         first_content_latency = None
 
+    if first_reasoning_time is not None:
+
+        first_reasoning_latency = (
+            first_reasoning_time
+            - start_time
+        )
+
+    else:
+
+        first_reasoning_latency = None
+
     return (
-        response_text,
+        content_text,
+        reasoning_text,
         usage,
         total_latency,
         first_content_latency,
+        first_reasoning_latency,
         response_id,
         returned_model,
+        system_fingerprint,
     )
 
 
 # ============================================================
-# SALVAMENTO
+# SALVAMENTO DOS RESULTADOS
 # ============================================================
 
 def save_result(
     task: str,
     prompt: str,
     prompt_path: Path,
-    response_text: str,
+    content_text: str,
+    reasoning_text: str,
     usage,
     latency: float,
     first_content_latency,
+    first_reasoning_latency,
     response_id,
     returned_model,
+    system_fingerprint,
 ):
     """
-    Salva os resultados da execução.
+    Salva:
+
+    prompt.txt
+    response.txt
+    reasoning.txt
+    code.ino
+    metadata.json
     """
 
     result_dir = (
@@ -474,12 +553,58 @@ def save_result(
     )
 
     # ========================================================
+    # ESCOLHE A FONTE DO CÓDIGO
+    # ========================================================
+
+    if content_text.strip():
+
+        code_source = "content"
+
+        source_for_code = (
+            content_text
+        )
+
+    elif reasoning_text.strip():
+
+        code_source = "reasoning"
+
+        source_for_code = (
+            reasoning_text
+        )
+
+    else:
+
+        raise RuntimeError(
+            "A API não retornou conteúdo "
+            "nem reasoning."
+        )
+
+    # ========================================================
     # EXTRAI CÓDIGO
     # ========================================================
 
-    code = extract_code(
-        response_text
+    code, code_block_found = extract_code(
+        source_for_code
     )
+
+    # Se estamos usando reasoning como fallback,
+    # exigimos um bloco de código Markdown.
+    #
+    # Isso evita salvar raciocínio textual inteiro
+    # como se fosse código Arduino.
+    if (
+        code_source == "reasoning"
+        and not code_block_found
+    ):
+
+        raise RuntimeError(
+            "O content veio vazio e o reasoning "
+            "não contém um bloco de código válido."
+        )
+
+    # ========================================================
+    # CAMINHOS
+    # ========================================================
 
     prompt_output = (
         result_dir
@@ -489,6 +614,11 @@ def save_result(
     response_output = (
         result_dir
         / "response.txt"
+    )
+
+    reasoning_output = (
+        result_dir
+        / "reasoning.txt"
     )
 
     code_output = (
@@ -502,7 +632,7 @@ def save_result(
     )
 
     # ========================================================
-    # PROMPT UTILIZADO
+    # SALVA PROMPT
     # ========================================================
 
     prompt_output.write_text(
@@ -511,16 +641,25 @@ def save_result(
     )
 
     # ========================================================
-    # RESPOSTA BRUTA
+    # SALVA CONTENT ORIGINAL
     # ========================================================
 
     response_output.write_text(
-        response_text,
+        content_text,
         encoding="utf-8"
     )
 
     # ========================================================
-    # CÓDIGO EXTRAÍDO
+    # SALVA REASONING ORIGINAL
+    # ========================================================
+
+    reasoning_output.write_text(
+        reasoning_text,
+        encoding="utf-8"
+    )
+
+    # ========================================================
+    # SALVA CÓDIGO
     # ========================================================
 
     code_output.write_text(
@@ -532,28 +671,20 @@ def save_result(
     # USAGE
     # ========================================================
 
-    usage_data = (
-        object_to_dict(
-            usage
-        )
+    usage_data = object_to_dict(
+        usage
     )
 
-    input_tokens = (
-        usage_data.get(
-            "prompt_tokens"
-        )
+    input_tokens = usage_data.get(
+        "prompt_tokens"
     )
 
-    output_tokens = (
-        usage_data.get(
-            "completion_tokens"
-        )
+    output_tokens = usage_data.get(
+        "completion_tokens"
     )
 
-    total_tokens = (
-        usage_data.get(
-            "total_tokens"
-        )
+    total_tokens = usage_data.get(
+        "total_tokens"
     )
 
     # ========================================================
@@ -584,16 +715,8 @@ def save_result(
     # CUSTO
     # ========================================================
 
-    # OpenRouter pode retornar informações
-    # adicionais de custo no objeto usage.
     cost = usage_data.get(
         "cost"
-    )
-
-    cost_details = (
-        usage_data.get(
-            "cost_details"
-        )
     )
 
     # ========================================================
@@ -623,15 +746,15 @@ def save_result(
             ).isoformat(),
 
         "prompt_file":
-            str(
+            relative_path(
                 prompt_path
-                .relative_to(
-                    PROJECT_ROOT
-                )
             ),
 
         "response_id":
             response_id,
+
+        "system_fingerprint":
+            system_fingerprint,
 
         # ----------------------------------------------------
         # LATÊNCIA
@@ -649,10 +772,19 @@ def save_result(
                     first_content_latency,
                     6
                 )
-                if (
-                    first_content_latency
-                    is not None
+                if first_content_latency
+                is not None
+                else None
+            ),
+
+        "first_reasoning_latency_seconds":
+            (
+                round(
+                    first_reasoning_latency,
+                    6
                 )
+                if first_reasoning_latency
+                is not None
                 else None
             ),
 
@@ -679,26 +811,53 @@ def save_result(
         },
 
         # ----------------------------------------------------
-        # CUSTO INFORMADO PELO OPENROUTER
+        # CUSTO
         # ----------------------------------------------------
 
-        "cost": cost,
-
-        "cost_details":
-            cost_details,
+        "cost":
+            cost,
 
         # ----------------------------------------------------
         # CONFIGURAÇÃO
         # ----------------------------------------------------
 
-"generation_config": {
-    "max_output_tokens": MAX_OUTPUT_TOKENS,
-    "temperature": TEMPERATURE,
-    "stream": True,
-},
+        "generation_config": {
+
+            "max_output_tokens":
+                MAX_OUTPUT_TOKENS,
+
+            "temperature":
+                TEMPERATURE,
+
+            "stream":
+                True,
+        },
 
         # ----------------------------------------------------
-        # USAGE ORIGINAL
+        # INFORMAÇÕES SOBRE A SAÍDA
+        # ----------------------------------------------------
+
+        "output": {
+
+            "content_present":
+                bool(
+                    content_text.strip()
+                ),
+
+            "reasoning_present":
+                bool(
+                    reasoning_text.strip()
+                ),
+
+            "code_source":
+                code_source,
+
+            "code_block_found":
+                code_block_found,
+        },
+
+        # ----------------------------------------------------
+        # USAGE COMPLETO
         # ----------------------------------------------------
 
         "raw_usage":
@@ -715,9 +874,14 @@ def save_result(
                     prompt
                 ),
 
-            "response_sha256":
+            "content_sha256":
                 sha256_text(
-                    response_text
+                    content_text
+                ),
+
+            "reasoning_sha256":
+                sha256_text(
+                    reasoning_text
                 ),
 
             "code_sha256":
@@ -727,12 +891,22 @@ def save_result(
         },
 
         # ----------------------------------------------------
-        # TAMANHO
+        # TAMANHOS
         # ----------------------------------------------------
+
+        "prompt_characters":
+            len(
+                prompt
+            ),
 
         "response_characters":
             len(
-                response_text
+                content_text
+            ),
+
+        "reasoning_characters":
+            len(
+                reasoning_text
             ),
 
         "code_characters":
@@ -740,6 +914,10 @@ def save_result(
                 code
             ),
     }
+
+    # ========================================================
+    # SALVA METADATA
+    # ========================================================
 
     metadata_output.write_text(
 
@@ -759,26 +937,20 @@ def save_result(
 
 
 # ============================================================
-# PROGRAMA PRINCIPAL
+# MAIN
 # ============================================================
 
 def main():
 
-    parser = (
-        argparse.ArgumentParser(
-            description=(
-                "Executa um prompt do "
-                "benchmark utilizando "
-                "DeepSeek V4 Flash "
-                "via OpenRouter."
-            )
+    parser = argparse.ArgumentParser(
+        description=(
+            "Executa prompts do benchmark utilizando "
+            "Poolside Laguna S 2.1 via OpenRouter."
         )
     )
 
     parser.add_argument(
-
         "task",
-
         help=(
             "Nome da tarefa. "
             "Exemplo: 01_bme280"
@@ -786,14 +958,11 @@ def main():
     )
 
     parser.add_argument(
-
         "--prompt",
-
         type=Path,
-
         help=(
-            "Arquivo de prompt opcional. "
-            "Se omitido será utilizado "
+            "Arquivo de prompt personalizado. "
+            "Se omitido será usado "
             "prompts/<task>.txt"
         ),
     )
@@ -801,7 +970,7 @@ def main():
     args = parser.parse_args()
 
     # ========================================================
-    # PROMPT
+    # LOCALIZA PROMPT
     # ========================================================
 
     if args.prompt:
@@ -810,10 +979,7 @@ def main():
             args.prompt
         )
 
-        if (
-            not
-            prompt_path.is_absolute()
-        ):
+        if not prompt_path.is_absolute():
 
             prompt_path = (
                 PROJECT_ROOT
@@ -826,6 +992,10 @@ def main():
             PROMPTS_DIR
             / f"{args.task}.txt"
         )
+
+    # ========================================================
+    # LÊ PROMPT
+    # ========================================================
 
     prompt = read_prompt(
         prompt_path
@@ -850,28 +1020,27 @@ def main():
     )
 
     print(
-        f"Developer : "
-        f"{MODEL_DEVELOPER}"
+        f"Developer   : {MODEL_DEVELOPER}"
     )
 
     print(
-        f"Provider  : "
-        f"{API_PROVIDER}"
+        f"Provider    : {API_PROVIDER}"
     )
 
     print(
-        f"Modelo    : "
-        f"{MODEL}"
+        f"Modelo      : {MODEL}"
     )
 
     print(
-        f"Tarefa    : "
-        f"{args.task}"
+        f"Tarefa      : {args.task}"
     )
 
     print(
-        f"Prompt    : "
-        f"{prompt_path}"
+        f"Temperature : {TEMPERATURE}"
+    )
+
+    print(
+        f"Prompt      : {prompt_path}"
     )
 
     print(
@@ -879,24 +1048,28 @@ def main():
     )
 
     print(
-        "Enviando prompt..."
+        "Enviando prompt...",
+        flush=True
     )
 
     # ========================================================
-    # API
+    # CHAMADA DA API
     # ========================================================
 
     try:
 
         (
-            response_text,
+            content_text,
+            reasoning_text,
             usage,
             latency,
             first_content_latency,
+            first_reasoning_latency,
             response_id,
             returned_model,
+            system_fingerprint,
 
-        ) = run_deepseek(
+        ) = run_laguna(
             prompt
         )
 
@@ -905,34 +1078,34 @@ def main():
         print()
 
         print(
-            "ERRO durante a chamada "
-            "da API:"
+            "ERRO durante a chamada da API:"
         )
 
         print(error)
 
+        # Sem retry automático.
         sys.exit(1)
 
     # ========================================================
-    # RESPOSTA VAZIA
+    # VERIFICA SAÍDA
     # ========================================================
 
     if (
-        not
-        response_text.strip()
+        not content_text.strip()
+        and not reasoning_text.strip()
     ):
 
         print()
 
         print(
-            "ERRO: a API retornou "
-            "uma resposta vazia."
+            "ERRO: a API não retornou "
+            "content nem reasoning."
         )
 
         sys.exit(1)
 
     # ========================================================
-    # SALVA
+    # SALVA RESULTADOS
     # ========================================================
 
     try:
@@ -947,13 +1120,11 @@ def main():
 
             prompt=prompt,
 
-            prompt_path=(
-                prompt_path
-            ),
+            prompt_path=prompt_path,
 
-            response_text=(
-                response_text
-            ),
+            content_text=content_text,
+
+            reasoning_text=reasoning_text,
 
             usage=usage,
 
@@ -963,12 +1134,18 @@ def main():
                 first_content_latency
             ),
 
-            response_id=(
-                response_id
+            first_reasoning_latency=(
+                first_reasoning_latency
             ),
+
+            response_id=response_id,
 
             returned_model=(
                 returned_model
+            ),
+
+            system_fingerprint=(
+                system_fingerprint
             ),
         )
 
@@ -977,8 +1154,7 @@ def main():
         print()
 
         print(
-            "ERRO ao salvar "
-            "os resultados:"
+            "ERRO ao salvar os resultados:"
         )
 
         print(error)
@@ -986,18 +1162,21 @@ def main():
         sys.exit(1)
 
     # ========================================================
-    # RESULTADO NO TERMINAL
+    # RESULTADO
     # ========================================================
 
-    tokens = (
-        metadata["tokens"]
-    )
+    tokens = metadata[
+        "tokens"
+    ]
+
+    output_info = metadata[
+        "output"
+    ]
 
     print()
 
     print(
-        "Resposta recebida "
-        "com sucesso."
+        "Resposta recebida com sucesso."
     )
 
     print()
@@ -1008,42 +1187,57 @@ def main():
     )
 
     print(
-        "Latência até primeiro conteúdo: "
+        "Latência até content: "
         f"{metadata['first_content_latency_seconds']} s"
+    )
+
+    print(
+        "Latência até reasoning: "
+        f"{metadata['first_reasoning_latency_seconds']} s"
     )
 
     print()
 
     print(
-        "Tokens de entrada    : "
+        "Tokens de entrada   : "
         f"{tokens['input']}"
     )
 
     print(
-        "Tokens de saída      : "
+        "Tokens de saída     : "
         f"{tokens['output']}"
     )
 
     print(
-        "Tokens de reasoning  : "
+        "Tokens de reasoning : "
         f"{tokens['reasoning']}"
     )
 
     print(
-        "Tokens em cache      : "
+        "Tokens em cache     : "
         f"{tokens['cached']}"
     )
 
     print(
-        "Tokens totais        : "
+        "Tokens totais       : "
         f"{tokens['total']}"
     )
 
     print()
 
     print(
-        "Custo informado pela API: "
-        f"{metadata['cost']}"
+        "Content presente    : "
+        f"{output_info['content_present']}"
+    )
+
+    print(
+        "Reasoning presente  : "
+        f"{output_info['reasoning_present']}"
+    )
+
+    print(
+        "Fonte do code.ino   : "
+        f"{output_info['code_source']}"
     )
 
     print()
@@ -1071,6 +1265,10 @@ def main():
 
     print(
         "  response.txt"
+    )
+
+    print(
+        "  reasoning.txt"
     )
 
     print(
