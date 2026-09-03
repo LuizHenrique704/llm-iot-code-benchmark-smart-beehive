@@ -1,0 +1,64 @@
+{
+    "model_developer": "Poolside",
+    "api_provider": "OpenRouter",
+    "requested_model": "poolside/laguna-s-2.1:free",
+    "returned_model": "poolside/laguna-s-2.1:free",
+    "task": "01_bme280",
+    "timestamp_utc": "2026-09-03T12:03:21.893911+00:00",
+    "prompt_file": "prompts/01_bme280.txt",
+    "response_id": "gen-1788436937-5IdpIWWBsa0CZG8tEp0y",
+    "latency_seconds": 69.482233,
+    "first_content_latency_seconds": 65.204778,
+    "tokens": {
+        "input": 478,
+        "output": 2701,
+        "reasoning": 2344,
+        "cached": 32,
+        "total": 3179
+    },
+    "cost": 0,
+    "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+    },
+    "generation_config": {
+        "max_output_tokens": 16384,
+        "stream": true
+    },
+    "raw_usage": {
+        "completion_tokens": 2701,
+        "prompt_tokens": 478,
+        "total_tokens": 3179,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": null,
+            "audio_tokens": 0,
+            "reasoning_tokens": 2344,
+            "rejected_prediction_tokens": null,
+            "text_tokens": null,
+            "image_tokens": 0
+        },
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 32,
+            "image_tokens": null,
+            "text_tokens": null,
+            "video_tokens": 0
+        },
+        "cost": 0,
+        "is_byok": false,
+        "cost_details": {
+            "upstream_inference_cost": 0,
+            "upstream_inference_prompt_cost": 0,
+            "upstream_inference_completions_cost": 0
+        }
+    },
+    "integrity": {
+        "prompt_sha256": "c0659a1a8561a538bd7d4f533bd28e4576c69bf722632aee499064f606befa6a",
+        "response_sha256": "a33ae5191f11286999fd28b57906fe406a32bada52e55192be41c1afe050e6d7",
+        "code_sha256": "ee2af337844173fcb5530775629b333f7b852d989126bf396960d6e13a79824c"
+    },
+    "response_characters": 1106,
+    "code_characters": 1095
+}
