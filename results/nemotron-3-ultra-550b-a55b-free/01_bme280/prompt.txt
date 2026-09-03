@@ -1,0 +1,35 @@
+Você deve gerar um sketch completo em C++ utilizando o framework Arduino para uma placa ESP32 Dev Module.
+
+O objetivo deste código é testar exclusivamente a comunicação da ESP32 com um sensor BME280.
+
+Utilize obrigatoriamente as seguintes configurações:
+
+* Placa: ESP32 Dev Module
+* Sensor: BME280
+* Comunicação: I2C
+* SDA: GPIO 21
+* SCL: GPIO 22
+* Endereço I2C do BME280: 0x76
+* Biblioteca: Adafruit_BME280
+* Bibliotecas auxiliares permitidas: Adafruit_Sensor e Wire
+* Comunicação serial: 115200 baud
+* Pressão ao nível do mar para cálculo de altitude: 1013.25 hPa
+
+O programa deve:
+
+1. Inicializar explicitamente o barramento I2C utilizando os GPIOs informados.
+2. Inicializar o BME280 no endereço 0x76.
+3. Detectar e informar pela porta serial caso o sensor não seja inicializado corretamente.
+4. Ler:
+
+   * temperatura em graus Celsius;
+   * umidade relativa em porcentagem;
+   * pressão atmosférica em hPa;
+   * altitude estimada em metros.
+5. Exibir todas as leituras pela porta serial.
+6. Realizar uma nova leitura a cada 2 segundos.
+7. Não gerar valores simulados caso o sensor apresente erro.
+
+Não utilize Wi-Fi, Bluetooth, LoRa ou outros sensores neste código.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.

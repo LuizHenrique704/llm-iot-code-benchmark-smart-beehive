@@ -1,0 +1,318 @@
+Você recebeu anteriormente três códigos independentes:
+
+CÓDIGO 1 — comunicação com BME280:
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define BME280_ADDRESS 0x76
+#define SEALEVELPRESSURE_HPA (1013.25)
+
+Adafruit_BME280 bme;
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) {
+    delay(10);
+  }
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  if (!bme.begin(BME280_ADDRESS, &Wire)) {
+    Serial.println("Erro: Sensor BME280 nao encontrado no endereco 0x76. Verifique a ligacao I2C.");
+    while (1) {
+      delay(1000);
+    }
+  }
+
+  Serial.println("BME280 inicializado com sucesso.");
+  Serial.println("------------------------------------");
+}
+
+void loop() {
+  float temperature = bme.readTemperature();
+  float humidity = bme.readHumidity();
+  float pressure = bme.readPressure() / 100.0F;
+  float altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+
+  if (isnan(temperature) || isnan(humidity) || isnan(pressure)) {
+    Serial.println("Erro ao ler dados do sensor BME280.");
+  } else {
+    Serial.print("Temperatura: ");
+    Serial.print(temperature);
+    Serial.println(" *C");
+
+    Serial.print("Umidade: ");
+    Serial.print(humidity);
+    Serial.println(" %");
+
+    Serial.print("Pressao: ");
+    Serial.print(pressure);
+    Serial.println(" hPa");
+
+    Serial.print("Altitude: ");
+    Serial.print(altitude);
+    Serial.println(" m");
+
+    Serial.println("------------------------------------");
+  }
+
+  delay(2000);
+}
+
+CÓDIGO 2 — comunicação com LoRa E32-TTL-100:
+
+#include <Arduino.h>
+#include <LoRa_E32.h>
+
+#define RX_PIN 16
+#define TX_PIN 17
+#define AUX_PIN 5
+#define M0_PIN 18
+#define M1_PIN 19
+
+HardwareSerial LoRaSerial(2);
+LoRa_E32 e32ttl(&LoRaSerial, AUX_PIN, M0_PIN, M1_PIN);
+
+void printParameters(struct Configuration configuration);
+void printModuleInformation(struct ModuleInformation moduleInformation);
+
+void setup() {
+  Serial.begin(115200);
+  while (!Serial) { delay(10); }
+  Serial.println("Iniciando teste LoRa E32-TTL-100...");
+
+  LoRaSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+  
+  if (!e32ttl.begin()) {
+    Serial.println("Falha ao inicializar o modulo E32!");
+    while (1) delay(1000);
+  }
+  Serial.println("Modulo E32 inicializado.");
+
+  ResponseStructContainer c = e32ttl.getConfiguration();
+  if (c.status.code != 1) {
+    Serial.print("Erro ao ler configuracao: ");
+    Serial.println(c.status.getResponseDescription());
+    while (1) delay(1000);
+  }
+  Configuration configuration = *(Configuration*)c.data;
+  c.close();
+
+  configuration.ADDH = 0x00;
+  configuration.ADDL = 0x01;
+  configuration.CHAN = 0x0D; 
+
+  configuration.SPED.uartBaudRate = UART_BPS_9600;
+  configuration.SPED.uartParity = MODE_00_8N1;
+  configuration.SPED.airDataRate = AIR_DATA_RATE_010_24;
+
+  configuration.OPTION.wirelessWakeupTime = WAKE_UP_250;
+  configuration.OPTION.ioDriveMode = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+  configuration.OPTION.fec = FEC_0_OFF;
+  configuration.OPTION.transmissionPower = POWER_20;
+  configuration.OPTION.fixedTransmission = FT_FIXED_TRANSMISSION;
+
+  ResponseStatus rs = e32ttl.setConfiguration(configuration, WRITE_CFG_PWR_DWN_SAVE);
+  if (rs.code != 1) {
+    Serial.print("Erro ao salvar configuracao: ");
+    Serial.println(rs.getResponseDescription());
+    while (1) delay(1000);
+  }
+  Serial.println("Configuracao aplicada e salva com sucesso.");
+  printParameters(configuration);
+
+  ResponseStatus rsMode = e32ttl.setMode(MODE_0_NORMAL);
+  if (rsMode.code != 1) {
+    Serial.print("Erro ao definir modo normal: ");
+    Serial.println(rsMode.getResponseDescription());
+  } else {
+    Serial.println("Modo Normal (MODE_0) ativado.");
+  }
+  
+  Serial.println("--- Iniciando loop de transmissao (a cada 5s) ---");
+}
+
+void loop() {
+  static unsigned long lastSend = 0;
+  const unsigned long interval = 5000;
+
+  if (millis() - lastSend >= interval) {
+    lastSend = millis();
+
+    Serial.print("Enviando 'teste_lora' para ADDH=0, ADDL=3, CHAN=13... ");
+    
+    ResponseStatus rs = e32ttl.sendFixedMessage(0x00, 0x03, 0x0D, "teste_lora");
+    
+    if (rs.code == 1) {
+      Serial.println("SUCESSO");
+    } else {
+      Serial.print("FALHA - Codigo: ");
+      Serial.print(rs.code);
+      Serial.print(" - ");
+      Serial.println(rs.getResponseDescription());
+    }
+  }
+}
+
+void printParameters(struct Configuration configuration) {
+  Serial.println("----------------------------------------");
+  Serial.print("HEAD: "); Serial.print(configuration.HEAD, HEX); Serial.print(" "); Serial.print(configuration.HEAD, BIN); Serial.println();
+  Serial.print("ADDH: "); Serial.println(configuration.ADDH, HEX);
+  Serial.print("ADDL: "); Serial.println(configuration.ADDL, HEX);
+  Serial.print("CHAN: "); Serial.println(configuration.CHAN, HEX);
+  Serial.println("--- SPED ---");
+  Serial.print("uartParity: "); Serial.println(configuration.SPED.uartParity, BIN);
+  Serial.print("uartBaudRate: "); Serial.println(configuration.SPED.uartBaudRate, BIN);
+  Serial.print("airDataRate: "); Serial.println(configuration.SPED.airDataRate, BIN);
+  Serial.println("--- OPTION ---");
+  Serial.print("fixedTransmission: "); Serial.println(configuration.OPTION.fixedTransmission, BIN);
+  Serial.print("ioDriveMode: "); Serial.println(configuration.OPTION.ioDriveMode, BIN);
+  Serial.print("wirelessWakeupTime: "); Serial.println(configuration.OPTION.wirelessWakeupTime, BIN);
+  Serial.print("fec: "); Serial.println(configuration.OPTION.fec, BIN);
+  Serial.print("transmissionPower: "); Serial.println(configuration.OPTION.transmissionPower, BIN);
+  Serial.println("----------------------------------------");
+}
+
+CÓDIGO 3 — leitura do sensor magnético MC-38:
+
+#include <Arduino.h>
+
+const uint8_t SENSOR_PIN = 4;
+const unsigned long DEBOUNCE_DELAY = 50;
+
+int lastStableState = HIGH;
+int lastRawReading = HIGH;
+unsigned long lastDebounceTime = 0;
+
+void printState(int state) {
+  if (state == HIGH) {
+    Serial.println("COLMEIA ABERTA");
+  } else {
+    Serial.println("COLMEIA FECHADA");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
+
+  delay(100);
+
+  lastRawReading = digitalRead(SENSOR_PIN);
+  lastStableState = lastRawReading;
+  lastDebounceTime = millis();
+
+  printState(lastStableState);
+}
+
+void loop() {
+  int currentRawReading = digitalRead(SENSOR_PIN);
+
+  if (currentRawReading != lastRawReading) {
+    lastDebounceTime = millis();
+    lastRawReading = currentRawReading;
+  }
+
+  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
+    if (currentRawReading != lastStableState) {
+      lastStableState = currentRawReading;
+      printState(lastStableState);
+    }
+  }
+}
+
+Utilizando esses três códigos como base, gere um único sketch completo em C++ para ESP32 Dev Module que integre todos os componentes em um sistema de monitoramento de colmeia.
+
+Não apenas concatene os códigos. Adapte e integre suas funcionalidades em um único programa compilável.
+
+Mantenha obrigatoriamente estas configurações:
+
+ESP32:
+
+ESP32 Dev Module
+frequência da CPU: 40 MHz
+
+BME280:
+
+SDA: GPIO 21
+SCL: GPIO 22
+endereço: 0x76
+biblioteca: Adafruit_BME280
+
+MC-38:
+
+GPIO: 4
+INPUT_PULLUP
+HIGH = colmeia aberta
+LOW = colmeia fechada
+
+LoRa E32-TTL-100:
+
+biblioteca: LoRa_E32
+UART2
+RX: GPIO 16
+TX: GPIO 17
+AUX: GPIO 5
+M0: GPIO 18
+M1: GPIO 19
+9600 baud
+SERIAL_8N1
+
+Configuração do transmissor:
+
+ADDH: 0
+ADDL: 1
+CHAN: 13
+AIR_DATA_RATE_010_24
+WAKE_UP_250
+IO_D_MODE_PUSH_PULLS_PULL_UPS
+FEC_0_OFF
+POWER_20
+FT_FIXED_TRANSMISSION
+
+Destino das transmissões:
+
+ADDH: 0
+ADDL: 3
+CHAN: 13
+
+Crie uma estrutura para transmissão contendo obrigatoriamente:
+
+identificador textual "colmeia";
+endereço MAC de 6 bytes da ESP32;
+temperatura;
+umidade;
+pressão em hPa;
+altitude;
+estado aberto/fechado da colmeia;
+contador de transmissões.
+
+Utilize o endereço MAC da própria ESP32 como identificador da colmeia.
+
+Funcionamento esperado:
+
+Inicializar o BME280, MC-38 e E32-TTL-100.
+Ler temperatura, umidade, pressão e altitude do BME280.
+Ler o estado do MC-38.
+Montar uma estrutura contendo os dados atuais.
+Enviar essa estrutura através do E32 utilizando transmissão fixa para o endereço 0:3 no canal 13.
+Incrementar o contador de transmissões.
+Permitir que o sistema acorde por:
+temporizador;
+abertura da colmeia detectada pelo GPIO 4.
+O temporizador deve acordar a ESP32 a cada 60 minutos.
+Quando ocorrer abertura da colmeia, transmitir os dados imediatamente.
+Depois de concluir a transmissão, colocar o rádio em modo de baixo consumo e colocar a ESP32 novamente em deep sleep.
+Não armazenar histórico de medições.
+Não utilizar memória não volátil para salvar os dados dos sensores.
+Não utilizar banco de dados, arquivos, cartão SD ou serviços externos.
+Não utilizar Wi-Fi, Bluetooth, HTTP, MQTT ou conexão com servidores.
+O objetivo do sistema é exclusivamente ler os sensores e transmitir pelo LoRa os dados atuais.
+
+O código deve tratar erros de inicialização do BME280 e erros de comunicação LoRa sem gerar dados fictícios.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.

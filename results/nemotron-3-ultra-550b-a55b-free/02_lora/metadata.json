@@ -1,0 +1,61 @@
+{
+    "model_developer": "NVIDIA",
+    "api_provider": "OpenRouter",
+    "requested_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "returned_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "task": "02_lora",
+    "timestamp_utc": "2026-09-03T13:55:51.533440+00:00",
+    "prompt_file": "prompts/02_lora.txt",
+    "response_id": "gen-1788443622-Gl6Ud9qQcI0QGgzaPYDu",
+    "system_fingerprint": null,
+    "latency_seconds": 129.696437,
+    "first_content_latency_seconds": 116.487386,
+    "tokens": {
+        "input": 554,
+        "output": 1562,
+        "reasoning": 246,
+        "cached": 0,
+        "total": 2116
+    },
+    "cost": 0,
+    "generation_config": {
+        "max_output_tokens": 16384,
+        "stream": true
+    },
+    "raw_usage": {
+        "completion_tokens": 1562,
+        "prompt_tokens": 554,
+        "total_tokens": 2116,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": null,
+            "audio_tokens": 0,
+            "reasoning_tokens": 246,
+            "rejected_prediction_tokens": null,
+            "text_tokens": null,
+            "image_tokens": 0
+        },
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null,
+            "video_tokens": 0
+        },
+        "cost": 0,
+        "is_byok": false,
+        "cost_details": {
+            "upstream_inference_cost": 0,
+            "upstream_inference_prompt_cost": 0,
+            "upstream_inference_completions_cost": 0
+        }
+    },
+    "integrity": {
+        "prompt_sha256": "735cf421ae54957c44ccb6ee20c2912a9d825846e8f9a2ea6be320102e92f006",
+        "response_sha256": "1eca60b1e1654105b421c8cf48b627ec09cc480b7447afa84e9f86839cae3314",
+        "code_sha256": "1eca60b1e1654105b421c8cf48b627ec09cc480b7447afa84e9f86839cae3314"
+    },
+    "prompt_characters": 1528,
+    "response_characters": 4062,
+    "code_characters": 4062
+}

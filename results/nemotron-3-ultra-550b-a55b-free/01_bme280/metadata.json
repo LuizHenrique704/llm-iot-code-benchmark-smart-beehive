@@ -1,0 +1,61 @@
+{
+    "model_developer": "NVIDIA",
+    "api_provider": "OpenRouter",
+    "requested_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "returned_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "task": "01_bme280",
+    "timestamp_utc": "2026-09-03T13:53:05.740791+00:00",
+    "prompt_file": "prompts/01_bme280.txt",
+    "response_id": "gen-1788443508-hcM0v9IumSPU4bZ1R23v",
+    "system_fingerprint": null,
+    "latency_seconds": 78.367824,
+    "first_content_latency_seconds": 74.273251,
+    "tokens": {
+        "input": 394,
+        "output": 621,
+        "reasoning": 153,
+        "cached": 0,
+        "total": 1015
+    },
+    "cost": 0,
+    "generation_config": {
+        "max_output_tokens": 16384,
+        "stream": true
+    },
+    "raw_usage": {
+        "completion_tokens": 621,
+        "prompt_tokens": 394,
+        "total_tokens": 1015,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": null,
+            "audio_tokens": 0,
+            "reasoning_tokens": 153,
+            "rejected_prediction_tokens": null,
+            "text_tokens": null,
+            "image_tokens": 0
+        },
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null,
+            "video_tokens": 0
+        },
+        "cost": 0,
+        "is_byok": false,
+        "cost_details": {
+            "upstream_inference_cost": 0,
+            "upstream_inference_prompt_cost": 0,
+            "upstream_inference_completions_cost": 0
+        }
+    },
+    "integrity": {
+        "prompt_sha256": "c0659a1a8561a538bd7d4f533bd28e4576c69bf722632aee499064f606befa6a",
+        "response_sha256": "da7f05755b42b3b1188ea3348b7540ae045b7841f59c3bb2ee3960150b71b97f",
+        "code_sha256": "da7f05755b42b3b1188ea3348b7540ae045b7841f59c3bb2ee3960150b71b97f"
+    },
+    "prompt_characters": 1278,
+    "response_characters": 1400,
+    "code_characters": 1400
+}
