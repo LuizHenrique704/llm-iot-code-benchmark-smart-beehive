@@ -1,0 +1,105 @@
+Você recebeu anteriormente três códigos independentes:
+
+CÓDIGO 1 — comunicação com BME280:
+
+{{CODIGO_BME280}}
+
+CÓDIGO 2 — comunicação com LoRa E32-TTL-100:
+
+{{CODIGO_LORA}}
+
+CÓDIGO 3 — leitura do sensor magnético MC-38:
+
+{{CODIGO_MC38}}
+
+Utilizando esses três códigos como base, gere um único sketch completo em C++ para ESP32 Dev Module que integre todos os componentes em um sistema de monitoramento de colmeia.
+
+Não apenas concatene os códigos. Adapte e integre suas funcionalidades em um único programa compilável.
+
+Mantenha obrigatoriamente estas configurações:
+
+ESP32:
+
+ESP32 Dev Module
+frequência da CPU: 40 MHz
+
+BME280:
+
+SDA: GPIO 21
+SCL: GPIO 22
+endereço: 0x76
+biblioteca: Adafruit_BME280
+
+MC-38:
+
+GPIO: 4
+INPUT_PULLUP
+HIGH = colmeia aberta
+LOW = colmeia fechada
+
+LoRa E32-TTL-100:
+
+biblioteca: LoRa_E32
+UART2
+RX: GPIO 16
+TX: GPIO 17
+AUX: GPIO 5
+M0: GPIO 18
+M1: GPIO 19
+9600 baud
+SERIAL_8N1
+
+Configuração do transmissor:
+
+ADDH: 0
+ADDL: 1
+CHAN: 13
+AIR_DATA_RATE_010_24
+WAKE_UP_250
+IO_D_MODE_PUSH_PULLS_PULL_UPS
+FEC_0_OFF
+POWER_20
+FT_FIXED_TRANSMISSION
+
+Destino das transmissões:
+
+ADDH: 0
+ADDL: 3
+CHAN: 13
+
+Crie uma estrutura para transmissão contendo obrigatoriamente:
+
+identificador textual "colmeia";
+endereço MAC de 6 bytes da ESP32;
+temperatura;
+umidade;
+pressão em hPa;
+altitude;
+estado aberto/fechado da colmeia;
+contador de transmissões.
+
+Utilize o endereço MAC da própria ESP32 como identificador da colmeia.
+
+Funcionamento esperado:
+
+Inicializar o BME280, MC-38 e E32-TTL-100.
+Ler temperatura, umidade, pressão e altitude do BME280.
+Ler o estado do MC-38.
+Montar uma estrutura contendo os dados atuais.
+Enviar essa estrutura através do E32 utilizando transmissão fixa para o endereço 0:3 no canal 13.
+Incrementar o contador de transmissões.
+Permitir que o sistema acorde por:
+temporizador;
+abertura da colmeia detectada pelo GPIO 4.
+O temporizador deve acordar a ESP32 a cada 60 minutos.
+Quando ocorrer abertura da colmeia, transmitir os dados imediatamente.
+Depois de concluir a transmissão, colocar o rádio em modo de baixo consumo e colocar a ESP32 novamente em deep sleep.
+Não armazenar histórico de medições.
+Não utilizar memória não volátil para salvar os dados dos sensores.
+Não utilizar banco de dados, arquivos, cartão SD ou serviços externos.
+Não utilizar Wi-Fi, Bluetooth, HTTP, MQTT ou conexão com servidores.
+O objetivo do sistema é exclusivamente ler os sensores e transmitir pelo LoRa os dados atuais.
+
+O código deve tratar erros de inicialização do BME280 e erros de comunicação LoRa sem gerar dados fictícios.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.
