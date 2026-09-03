@@ -238,13 +238,11 @@ def run_glm(prompt: str):
     )
 
     headers = {
-
-        "Authorization":
-            f"Bearer {api_token}",
-
-        "Content-Type":
-            "application/json",
-    }
+    "Authorization": f"Bearer {api_token}",
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+    "Connection": "close",
+}
 
     # ========================================================
     # PAYLOAD
@@ -281,11 +279,11 @@ def run_glm(prompt: str):
     )
 
     response = requests.post(
-        url,
-        headers=headers,
-        json=payload,
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    url,
+    headers=headers,
+    json=payload,
+    timeout=(30, 300),
+)
 
     end_time = (
         time.perf_counter()
