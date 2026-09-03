@@ -1,0 +1,53 @@
+{
+    "model_developer": "OpenAI",
+    "api_provider": "Groq",
+    "requested_model": "openai/gpt-oss-120b",
+    "returned_model": "openai/gpt-oss-120b",
+    "task": "03_mc38",
+    "timestamp_utc": "2026-09-03T13:29:58.014831+00:00",
+    "prompt_file": "prompts/03_mc38.txt",
+    "response_id": "chatcmpl-9ca9b304-6cbe-4359-a568-59bd7523c3c6",
+    "groq_request_id": "req_01m1kqce0kee08n2kfedx38q1r",
+    "system_fingerprint": "fp_9241e9962b",
+    "latency_seconds": 2.511419,
+    "first_content_latency_seconds": 1.367888,
+    "provider_timing": {
+        "queue_time_seconds": 0.210350132,
+        "prompt_time_seconds": 0.016807678,
+        "completion_time_seconds": 1.050188318,
+        "total_time_seconds": 1.066995996
+    },
+    "tokens": {
+        "input": 341,
+        "output": 501,
+        "reasoning": 254,
+        "cached": null,
+        "total": 842
+    },
+    "generation_config": {
+        "max_output_tokens": 16384,
+        "reasoning_effort": "medium",
+        "reasoning_format": "hidden",
+        "stream": true
+    },
+    "raw_usage": {
+        "completion_tokens": 501,
+        "prompt_tokens": 341,
+        "total_tokens": 842,
+        "completion_time": 1.050188318,
+        "completion_tokens_details": {
+            "reasoning_tokens": 254
+        },
+        "prompt_time": 0.016807678,
+        "prompt_tokens_details": null,
+        "queue_time": 0.210350132,
+        "total_time": 1.066995996
+    },
+    "integrity": {
+        "prompt_sha256": "b79c79285baeade55f891343067e05a753e8bd748c579233ac5aa7c272d74ef6",
+        "response_sha256": "d5fb9636e1d2015b34f00680ec2b193c937dddf6c5b45aca00c0dc2eec5b822c",
+        "code_sha256": "d5fb9636e1d2015b34f00680ec2b193c937dddf6c5b45aca00c0dc2eec5b822c"
+    },
+    "response_characters": 872,
+    "code_characters": 872
+}

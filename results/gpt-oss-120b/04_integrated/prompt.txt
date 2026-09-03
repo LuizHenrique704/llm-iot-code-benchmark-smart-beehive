@@ -1,0 +1,247 @@
+Você recebeu anteriormente três códigos independentes:
+
+CÓDIGO 1 — comunicação com BME280:
+
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+
+#define SDA_PIN 21
+#define SCL_PIN 22
+#define BME280_ADDRESS 0x76
+#define SEA_LEVEL_PRESSURE 1013.25
+
+Adafruit_BME280 bme;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(SDA_PIN, SCL_PIN);
+  if (!bme.begin(BME280_ADDRESS, &Wire)) {
+    Serial.println("BME280 initialization failed. Check wiring and address.");
+    while (true) {
+      delay(10);
+    }
+  }
+}
+
+void loop() {
+  float temperature = bme.readTemperature();
+  float humidity = bme.readHumidity();
+  float pressure = bme.readPressure() / 100.0F; // hPa
+  float altitude = bme.readAltitude(SEA_LEVEL_PRESSURE);
+
+  Serial.print("Temperature: ");
+  Serial.print(temperature);
+  Serial.println(" °C");
+
+  Serial.print("Humidity: ");
+  Serial.print(humidity);
+  Serial.println(" %");
+
+  Serial.print("Pressure: ");
+  Serial.print(pressure);
+  Serial.println(" hPa");
+
+  Serial.print("Altitude: ");
+  Serial.print(altitude);
+  Serial.println(" m");
+
+  Serial.println();
+  delay(2000);
+}
+
+CÓDIGO 2 — comunicação com LoRa E32-TTL-100:
+
+#include <LoRa_E32.h>
+
+#define LORA_RX 16
+#define LORA_TX 17
+#define LORA_AUX 5
+#define LORA_M0 18
+#define LORA_M1 19
+
+HardwareSerial SerialLora(2);
+LoRa_E32 lora(&SerialLora, LORA_AUX, LORA_M0, LORA_M1);
+
+void setup() {
+  Serial.begin(115200);
+  SerialLora.begin(9600, SERIAL_8N1, LORA_RX, LORA_TX);
+  delay(200);
+  if (lora.begin() != 0) {
+    Serial.println("LoRa begin error");
+    while (true);
+  }
+
+  Configuration cfg;
+  cfg.ADDH = 0;
+  cfg.ADDL = 1;
+  cfg.CHAN = 13;
+  cfg.UART_BPS = UART_BPS_9600;
+  cfg.UART_PARITY = MODE_00_8N1;
+  cfg.AIR_DATA_RATE = AIR_DATA_RATE_010_24;
+  cfg.SUB_PACKET_SETTING = 0;
+  cfg.RSSI_EN = 0;
+  cfg.TRANSMIT_POWER = POWER_20;
+  cfg.LBT = 0;
+  cfg.WOR = WAKE_UP_250;
+  cfg.FEC = FEC_0_OFF;
+  cfg.IO_DRIVE_MODE = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+
+  if (lora.setConfiguration(cfg) != 0) {
+    Serial.println("Set configuration error");
+    while (true);
+  }
+
+  lora.setMode(MODE_0_NORMAL);
+}
+
+void loop() {
+  static unsigned long lastTime = 0;
+  if (millis() - lastTime >= 5000) {
+    lastTime = millis();
+    const char *msg = "teste_lora";
+    int ret = lora.sendFixedMessage(0, 3, 13, msg);
+    if (ret == 0) {
+      Serial.println("Transmission successful");
+    } else {
+      Serial.print("Transmission error: ");
+      Serial.println(ret);
+    }
+  }
+}
+
+CÓDIGO 3 — leitura do sensor magnético MC-38:
+
+#include <Arduino.h>
+
+const uint8_t SENSOR_PIN = 4;
+const unsigned long DEBOUNCE_DELAY_MS = 50;
+
+uint8_t lastReading = HIGH;
+uint8_t stableState = HIGH;
+unsigned long lastDebounceTime = 0;
+
+void printState(uint8_t state) {
+  if (state == HIGH) {
+    Serial.println("Colmeia aberta");
+  } else {
+    Serial.println("Colmeia fechada");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
+  stableState = digitalRead(SENSOR_PIN);
+  lastReading = stableState;
+  printState(stableState);
+}
+
+void loop() {
+  uint8_t currentReading = digitalRead(SENSOR_PIN);
+
+  if (currentReading != lastReading) {
+    lastDebounceTime = millis();
+  }
+
+  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY_MS) {
+    if (currentReading != stableState) {
+      stableState = currentReading;
+      printState(stableState);
+    }
+  }
+
+  lastReading = currentReading;
+}
+
+Utilizando esses três códigos como base, gere um único sketch completo em C++ para ESP32 Dev Module que integre todos os componentes em um sistema de monitoramento de colmeia.
+
+Não apenas concatene os códigos. Adapte e integre suas funcionalidades em um único programa compilável.
+
+Mantenha obrigatoriamente estas configurações:
+
+ESP32:
+
+ESP32 Dev Module
+frequência da CPU: 40 MHz
+
+BME280:
+
+SDA: GPIO 21
+SCL: GPIO 22
+endereço: 0x76
+biblioteca: Adafruit_BME280
+
+MC-38:
+
+GPIO: 4
+INPUT_PULLUP
+HIGH = colmeia aberta
+LOW = colmeia fechada
+
+LoRa E32-TTL-100:
+
+biblioteca: LoRa_E32
+UART2
+RX: GPIO 16
+TX: GPIO 17
+AUX: GPIO 5
+M0: GPIO 18
+M1: GPIO 19
+9600 baud
+SERIAL_8N1
+
+Configuração do transmissor:
+
+ADDH: 0
+ADDL: 1
+CHAN: 13
+AIR_DATA_RATE_010_24
+WAKE_UP_250
+IO_D_MODE_PUSH_PULLS_PULL_UPS
+FEC_0_OFF
+POWER_20
+FT_FIXED_TRANSMISSION
+
+Destino das transmissões:
+
+ADDH: 0
+ADDL: 3
+CHAN: 13
+
+Crie uma estrutura para transmissão contendo obrigatoriamente:
+
+identificador textual "colmeia";
+endereço MAC de 6 bytes da ESP32;
+temperatura;
+umidade;
+pressão em hPa;
+altitude;
+estado aberto/fechado da colmeia;
+contador de transmissões.
+
+Utilize o endereço MAC da própria ESP32 como identificador da colmeia.
+
+Funcionamento esperado:
+
+Inicializar o BME280, MC-38 e E32-TTL-100.
+Ler temperatura, umidade, pressão e altitude do BME280.
+Ler o estado do MC-38.
+Montar uma estrutura contendo os dados atuais.
+Enviar essa estrutura através do E32 utilizando transmissão fixa para o endereço 0:3 no canal 13.
+Incrementar o contador de transmissões.
+Permitir que o sistema acorde por:
+temporizador;
+abertura da colmeia detectada pelo GPIO 4.
+O temporizador deve acordar a ESP32 a cada 60 minutos.
+Quando ocorrer abertura da colmeia, transmitir os dados imediatamente.
+Depois de concluir a transmissão, colocar o rádio em modo de baixo consumo e colocar a ESP32 novamente em deep sleep.
+Não armazenar histórico de medições.
+Não utilizar memória não volátil para salvar os dados dos sensores.
+Não utilizar banco de dados, arquivos, cartão SD ou serviços externos.
+Não utilizar Wi-Fi, Bluetooth, HTTP, MQTT ou conexão com servidores.
+O objetivo do sistema é exclusivamente ler os sensores e transmitir pelo LoRa os dados atuais.
+
+O código deve tratar erros de inicialização do BME280 e erros de comunicação LoRa sem gerar dados fictícios.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.
