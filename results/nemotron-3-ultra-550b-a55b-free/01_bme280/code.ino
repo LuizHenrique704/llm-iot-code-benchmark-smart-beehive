@@ -5,7 +5,7 @@
 #define SDA_PIN 21
 #define SCL_PIN 22
 #define BME280_ADDRESS 0x76
-#define SEALEVELPRESSURE_HPA (1013.25)
+#define SEALEVELPRESSURE_HPA 1013.25
 
 Adafruit_BME280 bme;
 
@@ -18,7 +18,7 @@ void setup() {
   Wire.begin(SDA_PIN, SCL_PIN);
 
   if (!bme.begin(BME280_ADDRESS, &Wire)) {
-    Serial.println("Erro: Sensor BME280 nao encontrado no endereco 0x76. Verifique a ligacao I2C.");
+    Serial.println("Falha ao inicializar o sensor BME280 no endereco 0x76. Verifique a ligacao I2C.");
     while (1) {
       delay(1000);
     }
@@ -34,7 +34,7 @@ void loop() {
   float pressure = bme.readPressure() / 100.0F;
   float altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
 
-  if (isnan(temperature) || isnan(humidity) || isnan(pressure)) {
+  if (isnan(temperature) || isnan(humidity) || isnan(pressure) || isnan(altitude)) {
     Serial.println("Erro ao ler dados do sensor BME280.");
   } else {
     Serial.print("Temperatura: ");

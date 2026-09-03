@@ -4,36 +4,40 @@
     "requested_model": "poolside/laguna-s-2.1:free",
     "returned_model": "poolside/laguna-s-2.1:free",
     "task": "04_integrated",
-    "timestamp_utc": "2026-09-03T12:34:11.685560+00:00",
+    "timestamp_utc": "2026-09-03T22:29:35.763403+00:00",
     "prompt_file": "results/laguna-s-2.1-free/04_integrated/prompt_generated.txt",
-    "response_id": "gen-1788438673-KJZRLP9IWpxf5E0rp4Uz",
-    "latency_seconds": 184.356109,
-    "first_content_latency_seconds": 167.068274,
+    "response_id": "gen-1788474532-348LSS3aTToaAmcxkFaY",
+    "system_fingerprint": null,
+    "latency_seconds": 45.045149,
+    "first_content_latency_seconds": 19.445899,
+    "first_reasoning_latency_seconds": 2.666427,
     "tokens": {
         "input": 2037,
-        "output": 9426,
-        "reasoning": 8561,
+        "output": 1623,
+        "reasoning": 669,
         "cached": 32,
-        "total": 11463
+        "total": 3660
     },
     "cost": 0,
-    "cost_details": {
-        "upstream_inference_cost": 0,
-        "upstream_inference_prompt_cost": 0,
-        "upstream_inference_completions_cost": 0
-    },
     "generation_config": {
         "max_output_tokens": 16384,
+        "temperature": 0.0,
         "stream": true
     },
+    "output": {
+        "content_present": true,
+        "reasoning_present": true,
+        "code_source": "content",
+        "code_block_found": true
+    },
     "raw_usage": {
-        "completion_tokens": 9426,
+        "completion_tokens": 1623,
         "prompt_tokens": 2037,
-        "total_tokens": 11463,
+        "total_tokens": 3660,
         "completion_tokens_details": {
             "accepted_prediction_tokens": null,
             "audio_tokens": 0,
-            "reasoning_tokens": 8561,
+            "reasoning_tokens": 669,
             "rejected_prediction_tokens": null,
             "text_tokens": null,
             "image_tokens": 0
@@ -56,9 +60,12 @@
     },
     "integrity": {
         "prompt_sha256": "33c7a348f0c8f343588c4944a09aab6bb23d02dc63cfc3a88f67407074ecf9e8",
-        "response_sha256": "54b4070918db9f4da814f113fc16da7f1693431827971a219e49542373fe8a16",
-        "code_sha256": "54b4070918db9f4da814f113fc16da7f1693431827971a219e49542373fe8a16"
+        "content_sha256": "f2d5fbdebd11f3ea32298567d0fda9f4f76720f09db089de03dbe95418cf99dd",
+        "reasoning_sha256": "a33c048e7b54afee569ee05d18a44fe5c5467b3c6ce20034059099a3fc333336",
+        "code_sha256": "3c94d5677e1f6e50d555042390779ac6dd95fad639df7da12042862f9c4ad4d3"
     },
-    "response_characters": 2528,
-    "code_characters": 2528
+    "prompt_characters": 5556,
+    "response_characters": 2549,
+    "reasoning_characters": 2958,
+    "code_characters": 2538
 }

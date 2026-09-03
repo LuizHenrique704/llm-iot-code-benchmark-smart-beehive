@@ -1,0 +1,227 @@
+Abaixo está o código completo do transmissor integrado produzido anteriormente:
+
+#include <Arduino.h>
+#include <Wire.h>
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BME280.h>
+#include <HardwareSerial.h>
+#include "LoRa_E32.h"
+#include <esp_mac.h>
+#include <esp_sleep.h>
+
+#define I2C_SDA 21
+#define I2C_SCL 22
+#define BME280_ADDR 0x76
+#define SEALEVELPRESSURE_HPA (1013.25)
+
+#define SENSOR_PIN 4
+
+#define PIN_RX 16
+#define PIN_TX 17
+#define PIN_AUX 5
+#define PIN_M0 18
+#define PIN_M1 19
+
+#define TX_ADDH 0
+#define TX_ADDL 1
+#define TX_CHAN 13
+
+#define DEST_ADDH 0
+#define DEST_ADDL 3
+#define DEST_CHAN 13
+
+#define SLEEP_TIME_US (60ULL * 60ULL * 1000000ULL)
+
+#pragma pack(push, 1)
+struct DadosTransmissao {
+  char identificador[8];
+  uint8_t mac[6];
+  float temperatura;
+  float umidade;
+  float pressao;
+  float altitude;
+  uint8_t colmeiaAberta;
+  uint32_t contador;
+};
+#pragma pack(pop)
+
+RTC_DATA_ATTR uint32_t contadorTransmissoes = 0;
+
+Adafruit_BME280 bme;
+LoRa_E32 e32(&Serial2, PIN_AUX, PIN_M0, PIN_M1);
+
+void setup() {
+  setCpuFrequencyMhz(40);
+
+  Serial.begin(115200);
+
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
+  delay(10);
+
+  Wire.begin(I2C_SDA, I2C_SCL);
+  bool bmeIniciado = bme.begin(BME280_ADDR, &Wire);
+
+  Serial2.begin(9600, SERIAL_8N1, PIN_RX, PIN_TX);
+  e32.begin();
+
+  ResponseStructContainer c = e32.getConfiguration();
+  if (c.status.code == 1) {
+    Configuration configuration = *(Configuration*)c.data;
+    bool precisaConfigurar = false;
+
+    if (configuration.ADDH != TX_ADDH || configuration.ADDL != TX_ADDL || configuration.CHAN != TX_CHAN ||
+        configuration.SPED.uartBaudRate != UART_BPS_9600 || configuration.SPED.uartParity != MODE_00_8N1 ||
+        configuration.SPED.airDataRate != AIR_DATA_RATE_010_24 || configuration.OPTION.wirelessWakeUpTime != WAKE_UP_250 ||
+        configuration.OPTION.ioDriveMode != IO_D_MODE_PUSH_PULLS_PULL_UPS || configuration.OPTION.fec != FEC_0_OFF ||
+        configuration.OPTION.transmissionPower != POWER_20 || configuration.OPTION.fixedTransmission != FT_FIXED_TRANSMISSION) {
+
+      configuration.ADDH = TX_ADDH;
+      configuration.ADDL = TX_ADDL;
+      configuration.CHAN = TX_CHAN;
+      configuration.SPED.uartBaudRate = UART_BPS_9600;
+      configuration.SPED.uartParity = MODE_00_8N1;
+      configuration.SPED.airDataRate = AIR_DATA_RATE_010_24;
+      configuration.OPTION.wirelessWakeUpTime = WAKE_UP_250;
+      configuration.OPTION.ioDriveMode = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+      configuration.OPTION.fec = FEC_0_OFF;
+      configuration.OPTION.transmissionPower = POWER_20;
+      configuration.OPTION.fixedTransmission = FT_FIXED_TRANSMISSION;
+
+      precisaConfigurar = true;
+    }
+
+    if (precisaConfigurar) {
+      e32.setConfiguration(configuration, WRITE_CFG_PWR_DWN_SAVE);
+    }
+  }
+  c.close();
+
+  e32.setMode(MODE_0_NORMAL);
+  delay(50);
+
+  DadosTransmissao pacote;
+  memset(&pacote, 0, sizeof(pacote));
+  strncpy(pacote.identificador, "colmeia", sizeof(pacote.identificador));
+
+  esp_read_mac(pacote.mac, ESP_MAC_WIFI_STA);
+
+  if (bmeIniciado) {
+    pacote.temperatura = bme.readTemperature();
+    pacote.umidade = bme.readHumidity();
+    pacote.pressao = bme.readPressure() / 100.0F;
+    pacote.altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+  } else {
+    pacote.temperatura = NAN;
+    pacote.umidade = NAN;
+    pacote.pressao = NAN;
+    pacote.altitude = NAN;
+  }
+
+  pacote.colmeiaAberta = (digitalRead(SENSOR_PIN) == HIGH) ? 1 : 0;
+  pacote.contador = ++contadorTransmissoes;
+
+  e32.sendFixedMessage(DEST_ADDH, DEST_ADDL, DEST_CHAN, &pacote, sizeof(pacote));
+
+  e32.setMode(MODE_3_SLEEP);
+  delay(50);
+
+  esp_sleep_enable_timer_wakeup(SLEEP_TIME_US);
+  esp_sleep_enable_ext0_wakeup((gpio_num_t)SENSOR_PIN, 1);
+
+  esp_deep_sleep_start();
+}
+
+void loop() {
+}
+
+Gere agora um segundo sketch completo em C++ para uma ESP32 Dev Module que funcione como receptor dos dados enviados pelo transmissor.
+
+O objetivo do receptor é exclusivamente receber os dados via LoRa e mostrar pela porta serial o pacote mais recentemente recebido.
+
+O receptor NÃO deve armazenar histórico das medições.
+
+Utilize obrigatoriamente:
+
+ESP32 Dev Module
+módulo E32-TTL-100
+biblioteca LoRa_E32
+UART2
+RX: GPIO 16
+TX: GPIO 17
+AUX: GPIO 5
+M0: GPIO 18
+M1: GPIO 19
+UART: 9600 baud
+SERIAL_8N1
+
+Configure o receptor com:
+
+ADDH: 0
+ADDL: 3
+CHAN: 13
+UART_BPS_9600
+MODE_00_8N1
+AIR_DATA_RATE_010_24
+WAKE_UP_250
+IO_D_MODE_PUSH_PULLS_PULL_UPS
+FEC_0_OFF
+POWER_20
+FT_FIXED_TRANSMISSION
+
+O programa deve:
+
+Inicializar e configurar corretamente o E32-TTL-100.
+Permanecer aguardando transmissões do sender.
+Receber exatamente a estrutura de dados utilizada pelo transmissor fornecido.
+Identificar corretamente mensagens do tipo "colmeia".
+Interpretar corretamente todos os campos recebidos.
+Manter em memória somente os dados correspondentes ao pacote atualmente recebido.
+Quando um novo pacote chegar, os dados anteriores devem ser simplesmente substituídos pelos novos dados.
+Não manter lista, vetor, fila ou histórico das transmissões recebidas.
+Após cada recepção válida, imprimir pela porta serial somente os dados do pacote recém-recebido.
+
+A saída deve mostrar:
+
+MAC da colmeia;
+temperatura em °C;
+umidade em %;
+pressão em hPa;
+altitude em metros;
+estado da colmeia como ABERTA ou FECHADA;
+contador de transmissões.
+
+Exemplo de formato esperado da saída:
+
+MAC: AA:BB:CC:DD:EE
+Temperatura: 32.40 C
+Umidade: 61.20 %
+Pressao: 1008.30 hPa
+Altitude: 42.10 m
+Estado: FECHADA
+Contador: 15
+
+O receptor deve informar pela porta serial caso ocorra erro na recepção do pacote.
+
+Não implemente envio para banco de dados.
+
+Não implemente armazenamento permanente.
+
+Não utilize Preferences, EEPROM, SPIFFS, LittleFS, cartão SD ou qualquer outro mecanismo de persistência.
+
+Não utilize Wi-Fi.
+
+Não utilize Bluetooth.
+
+Não utilize HTTP.
+
+Não utilize MQTT.
+
+Não utilize APIs ou servidores externos.
+
+Não envie os dados recebidos para nenhum outro dispositivo ou sistema.
+
+Não é necessário enviar ACK ou qualquer resposta ao transmissor.
+
+A única finalidade do receiver é receber o pacote LoRa mais recente, interpretar seus dados e exibi-los pela porta serial.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.

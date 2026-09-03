@@ -1,0 +1,30 @@
+{
+    "provider": "Google",
+    "model": "gemini-3.8-flash",
+    "task": "02_lora",
+    "timestamp_utc": "2026-09-03T19:02:17.277162+00:00",
+    "prompt_file": "prompts/02_lora.txt",
+    "response_id": "L8SZapvdAqniqtsP4dvS6AQ",
+    "latency_seconds": 17.191648,
+    "first_chunk_latency_seconds": 14.947669,
+    "tokens": {
+        "input": 543,
+        "output": 776,
+        "thought": 1329,
+        "cached": null,
+        "tool_use": null,
+        "total": 2648
+    },
+    "generation_config": {
+        "thinking_level": "medium",
+        "max_output_tokens": 16384,
+        "temperature": 0.0
+    },
+    "integrity": {
+        "prompt_sha256": "735cf421ae54957c44ccb6ee20c2912a9d825846e8f9a2ea6be320102e92f006",
+        "response_sha256": "70f0b83b94551ec169b74743fd39b59ff41ec4a3329dd3302079422d5f057f31",
+        "code_sha256": "70f0b83b94551ec169b74743fd39b59ff41ec4a3329dd3302079422d5f057f31"
+    },
+    "response_characters": 2283,
+    "code_characters": 2283
+}

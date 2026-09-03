@@ -9,22 +9,23 @@ unsigned long lastDebounceTime = 0;
 
 void printState(int state) {
   if (state == HIGH) {
-    Serial.println("COLMEIA ABERTA");
+    Serial.println("ESTADO: COLMEIA ABERTA");
   } else {
-    Serial.println("COLMEIA FECHADA");
+    Serial.println("ESTADO: COLMEIA FECHADA");
   }
 }
 
 void setup() {
   Serial.begin(115200);
-  pinMode(SENSOR_PIN, INPUT_PULLUP);
+  while (!Serial) { ; }
 
-  delay(100);
+  pinMode(SENSOR_PIN, INPUT_PULLUP);
 
   lastRawReading = digitalRead(SENSOR_PIN);
   lastStableState = lastRawReading;
   lastDebounceTime = millis();
 
+  Serial.println("--- Iniciando Monitoramento MC-38 (GPIO 4) ---");
   printState(lastStableState);
 }
 

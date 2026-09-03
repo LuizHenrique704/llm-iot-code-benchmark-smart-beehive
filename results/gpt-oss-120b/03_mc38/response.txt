@@ -1,13 +1,13 @@
 #include <Arduino.h>
 
-const uint8_t SENSOR_PIN = 4;
-const unsigned long DEBOUNCE_DELAY_MS = 50;
+const int SENSOR_PIN = 4;
+const unsigned long DEBOUNCE_DELAY = 50; // milliseconds
 
-uint8_t lastReading = HIGH;
-uint8_t stableState = HIGH;
+int lastReading = HIGH;
+int stableState = HIGH;
 unsigned long lastDebounceTime = 0;
 
-void printState(uint8_t state) {
+void printState(int state) {
   if (state == HIGH) {
     Serial.println("Colmeia aberta");
   } else {
@@ -24,13 +24,13 @@ void setup() {
 }
 
 void loop() {
-  uint8_t currentReading = digitalRead(SENSOR_PIN);
+  int currentReading = digitalRead(SENSOR_PIN);
 
   if (currentReading != lastReading) {
     lastDebounceTime = millis();
   }
 
-  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY_MS) {
+  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
     if (currentReading != stableState) {
       stableState = currentReading;
       printState(stableState);

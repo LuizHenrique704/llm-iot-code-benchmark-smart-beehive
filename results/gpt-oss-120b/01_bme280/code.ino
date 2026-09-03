@@ -2,20 +2,19 @@
 #include <Adafruit_Sensor.h>
 #include <Adafruit_BME280.h>
 
-#define SDA_PIN 21
-#define SCL_PIN 22
-#define BME280_ADDRESS 0x76
-#define SEA_LEVEL_PRESSURE 1013.25
+#define SEALEVELPRESSURE_HPA (1013.25)
 
 Adafruit_BME280 bme;
 
 void setup() {
   Serial.begin(115200);
-  Wire.begin(SDA_PIN, SCL_PIN);
-  if (!bme.begin(BME280_ADDRESS, &Wire)) {
-    Serial.println("BME280 initialization failed. Check wiring and address.");
+  while (!Serial) { ; }
+
+  Wire.begin(21, 22);
+  if (!bme.begin(0x76, &Wire)) {
+    Serial.println("Erro: BME280 não encontrado no endereço 0x76.");
     while (true) {
-      delay(10);
+      delay(100);
     }
   }
 }
@@ -23,18 +22,18 @@ void setup() {
 void loop() {
   float temperature = bme.readTemperature();
   float humidity = bme.readHumidity();
-  float pressure = bme.readPressure() / 100.0F; // hPa
-  float altitude = bme.readAltitude(SEA_LEVEL_PRESSURE);
+  float pressure = bme.readPressure() / 100.0F;
+  float altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
 
-  Serial.print("Temperature: ");
+  Serial.print("Temperatura: ");
   Serial.print(temperature);
-  Serial.println(" °C");
+  Serial.println(" *C");
 
-  Serial.print("Humidity: ");
+  Serial.print("Umidade: ");
   Serial.print(humidity);
   Serial.println(" %");
 
-  Serial.print("Pressure: ");
+  Serial.print("Pressao: ");
   Serial.print(pressure);
   Serial.println(" hPa");
 
@@ -42,6 +41,6 @@ void loop() {
   Serial.print(altitude);
   Serial.println(" m");
 
-  Serial.println();
+  Serial.println("---------------------------");
   delay(2000);
 }

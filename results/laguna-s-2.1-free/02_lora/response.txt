@@ -1,48 +1,44 @@
-#include <LoRa_E32.h>
+```cpp
 #include <HardwareSerial.h>
+#include <LoRa_E32.h>
 
-HardwareSerial uart2(2);
-LoRa_E32 e32ttl(&uart2, 5, 18, 19);
+#define RX_PIN 16
+#define TX_PIN 17
+#define AUX_PIN 5
+#define M0_PIN 18
+#define M1_PIN 19
 
-unsigned long lastSend = 0;
-const long interval = 5000;
+HardwareSerial UART2(2);
+LoRa_E32 e32(&UART2, AUX_PIN, M0_PIN, M1_PIN);
 
 void setup() {
   Serial.begin(9600);
   while (!Serial) {}
 
-  uart2.begin(9600, SERIAL_8N1, 16, 17);
+  UART2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
 
-  e32ttl.setMode(MODE_CONFIG);
+  e32.begin();
 
-  e32ttl.setAddH(0);
-  e32ttl.setAddL(1);
-  e32ttl.setChan(13);
-  e32ttl.setUARTbaud(UART_BPS_9600);
-  e32ttl.setUARTparity(MODE_00_8N1);
-  e32ttl.setAirdatarate(AIR_DATA_RATE_010_24);
-  e32ttl.setWakeup(WAKE_UP_250);
-  e32ttl.setIO_Mode(IO_D_MODE_PUSH_PULLS_PULL_UPS);
-  e32ttl.setFEC(FEC_0_OFF);
-  e32ttl.setPower(POWER_20);
-  e32ttl.setFixedTransmission(FT_FIXED_TRANSMISSION);
+  e32.setParameters(0, 1, 13, UART_BPS_9600, MODE_00_8N1, AIR_DATA_RATE_010_24, WAKE_UP_250, IO_D_MODE_PUSH_PULLS_PULL_UPS, FEC_0_OFF, POWER_20, FT_FIXED_TRANSMISSION);
 
-  e32ttl.saveParams();
-  e32ttl.setMode(MODE_NORMAL);
+  e32.setMode(MODE_NORMAL);
 
-  Serial.println("Configuracao aplicada. Modulo em modo normal.");
+  Serial.println("Configuracao concluida.");
 }
 
 void loop() {
-  if (millis() - lastSend >= interval) {
-    lastSend = millis();
+  const char* message = "teste_lora";
+  uint8_t len = strlen(message);
 
-    int result = e32ttl.sendFixedMessage(0, 3, 13, "teste_lora");
+  uint8_t result = e32.sendFixedMessage(0, 3, 13, (uint8_t*)message, len);
 
-    if (result == 0) {
-      Serial.println("Transmissao realizada com sucesso.");
-    } else {
-      Serial.println("Erro na transmissao.");
-    }
+  if (result == 0) {
+    Serial.println("Transmissao bem-sucedida.");
+  } else {
+    Serial.print("Erro na transmissao: ");
+    Serial.println(result);
   }
+
+  delay(5000);
 }
+```

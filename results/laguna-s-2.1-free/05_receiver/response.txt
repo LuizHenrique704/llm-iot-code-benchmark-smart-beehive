@@ -1,12 +1,14 @@
 ```cpp
+#include <Wire.h>
 #include <LoRa_E32.h>
 #include <HardwareSerial.h>
+#include "esp_sleep.h"
 
 #define UART_RX 16
 #define UART_TX 17
+#define AUX_PIN 5
 #define M0_PIN 18
 #define M1_PIN 19
-#define AUX_PIN 5
 
 HardwareSerial uart2(2);
 LoRa_E32 e32ttl(&uart2, AUX_PIN, M0_PIN, M1_PIN);
@@ -22,7 +24,7 @@ typedef struct __attribute__((packed)) {
     uint32_t transmissions;
 } TelemetryData;
 
-TelemetryData currentData;
+TelemetryData latestData;
 
 void setup() {
     Serial.begin(115200);
@@ -45,54 +47,54 @@ void setup() {
     e32ttl.setFixedTransmission(FT_FIXED_TRANSMISSION);
     e32ttl.saveParams();
     e32ttl.setMode(MODE_NORMAL);
-    e32ttl.receiveInit();
 }
 
 void loop() {
-    static uint8_t buffer[5 + sizeof(TelemetryData)];
-    uint8_t len = 0;
+    uint8_t buffer[sizeof(TelemetryData)];
+    int result = e32ttl.receiveFixedMessage(0, 1, 13, buffer, sizeof(buffer));
 
-    if (e32ttl.readData(buffer, &len) == 0 && len == 5 + sizeof(TelemetryData)) {
-        TelemetryData receivedData;
-        memcpy(&receivedData, buffer + 5, sizeof(TelemetryData));
+    if (result > 0) {
+        TelemetryData* data = (TelemetryData*)buffer;
 
-        if (strcmp(receivedData.identifier, "colmeia") == 0) {
-            currentData = receivedData;
-            printData();
+        if (strcmp(data->identifier, "colmeia") == 0) {
+            latestData = *data;
+
+            Serial.print("MAC: ");
+            for (int i = 0; i < 6; i++) {
+                if (i > 0) Serial.print(":");
+                if (latestData.mac[i] < 0x10) Serial.print("0");
+                Serial.print(latestData.mac[i], HEX);
+            }
+            Serial.println();
+
+            Serial.print("Temperatura: ");
+            Serial.print(latestData.temperature, 2);
+            Serial.println(" C");
+
+            Serial.print("Umidade: ");
+            Serial.print(latestData.humidity, 2);
+            Serial.println(" %");
+
+            Serial.print("Pressao: ");
+            Serial.print(latestData.pressure, 2);
+            Serial.println(" hPa");
+
+            Serial.print("Altitude: ");
+            Serial.print(latestData.altitude, 2);
+            Serial.println(" m");
+
+            Serial.print("Estado: ");
+            if (latestData.hiveState == 1) {
+                Serial.println("ABERTA");
+            } else {
+                Serial.println("FECHADA");
+            }
+
+            Serial.print("Contador: ");
+            Serial.println(latestData.transmissions);
         }
-    } else {
-        if (len != 0 || e32ttl.getMode() == MODE_NORMAL) {
-            Serial.println("Erro na recepção do pacote.");
-        }
+    } else if (result < 0) {
+        Serial.println("Erro na recepcao do pacote.");
     }
-}
-
-void printData() {
-    char macStr[18];
-    snprintf(macStr, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
-            currentData.mac[0], currentData.mac[1], currentData.mac[2],
-            currentData.mac[3], currentData.mac[4], currentData.mac[5]);
-
-    const char* stateStr = (currentData.hiveState == 1) ? "ABERTA" : "FECHADA";
-
-    Serial.println("------------------------------------------------------------");
-    Serial.print("MAC: ");
-    Serial.println(macStr);
-    Serial.print("Temperatura: ");
-    Serial.print(currentData.temperature, 2);
-    Serial.println(" C");
-    Serial.print("Umidade: ");
-    Serial.print(currentData.humidity, 2);
-    Serial.println(" %");
-    Serial.print("Pressao: ");
-    Serial.print(currentData.pressure, 2);
-    Serial.println(" hPa");
-    Serial.print("Altitude: ");
-    Serial.print(currentData.altitude, 2);
-    Serial.println(" m");
-    Serial.print("Estado: ");
-    Serial.println(stateStr);
-    Serial.print("Contador: ");
-    Serial.println(currentData.transmissions);
 }
 ```

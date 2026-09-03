@@ -4,17 +4,17 @@
     "requested_model": "poolside/laguna-s-2.1:free",
     "returned_model": "poolside/laguna-s-2.1:free",
     "task": "02_lora",
-    "timestamp_utc": "2026-09-03T12:05:10.149721+00:00",
+    "timestamp_utc": "2026-09-03T22:06:55.852160+00:00",
     "prompt_file": "prompts/02_lora.txt",
-    "response_id": "gen-1788437047-Ht7GicYGO6wNCTWt6wxt",
-    "latency_seconds": 67.837939,
-    "first_content_latency_seconds": 60.878965,
+    "response_id": "gen-1788473153-Ex1SyS1AGc9QjXW5o8e7",
+    "latency_seconds": 66.468252,
+    "first_content_latency_seconds": 59.297607,
     "tokens": {
         "input": 636,
-        "output": 3494,
-        "reasoning": 3048,
+        "output": 2485,
+        "reasoning": 2117,
         "cached": 32,
-        "total": 4130
+        "total": 3121
     },
     "cost": 0,
     "cost_details": {
@@ -24,16 +24,17 @@
     },
     "generation_config": {
         "max_output_tokens": 16384,
+        "temperature": 0.0,
         "stream": true
     },
     "raw_usage": {
-        "completion_tokens": 3494,
+        "completion_tokens": 2485,
         "prompt_tokens": 636,
-        "total_tokens": 4130,
+        "total_tokens": 3121,
         "completion_tokens_details": {
             "accepted_prediction_tokens": null,
             "audio_tokens": 0,
-            "reasoning_tokens": 3048,
+            "reasoning_tokens": 2117,
             "rejected_prediction_tokens": null,
             "text_tokens": null,
             "image_tokens": 0
@@ -56,9 +57,9 @@
     },
     "integrity": {
         "prompt_sha256": "735cf421ae54957c44ccb6ee20c2912a9d825846e8f9a2ea6be320102e92f006",
-        "response_sha256": "4b35b3d59090e7155755ed43a4b9eb013375455b6e36d746ba8e63e6c423eff0",
-        "code_sha256": "4b35b3d59090e7155755ed43a4b9eb013375455b6e36d746ba8e63e6c423eff0"
+        "response_sha256": "bca7cb5078c6bd998a006a86e41404afb9c152572a49b6bc17f24de278e0cc4c",
+        "code_sha256": "d177463b069ab71dea3440dfb00a57425ff577532bf1ade18c25d8ef037eedeb"
     },
-    "response_characters": 1111,
-    "code_characters": 1111
+    "response_characters": 933,
+    "code_characters": 922
 }

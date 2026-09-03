@@ -1,0 +1,30 @@
+{
+    "provider": "Google",
+    "model": "gemini-3.8-flash",
+    "task": "05_receiver",
+    "timestamp_utc": "2026-09-03T20:34:47.148151+00:00",
+    "prompt_file": "results/gemini-3.8-flash/05_receiver/prompt_generated.txt",
+    "response_id": "3tmZapHzD9Wsz7IP0bD2sQo",
+    "latency_seconds": 9.712348,
+    "first_chunk_latency_seconds": 6.982088,
+    "tokens": {
+        "input": 2144,
+        "output": 1431,
+        "thought": 1335,
+        "cached": null,
+        "tool_use": null,
+        "total": 4910
+    },
+    "generation_config": {
+        "thinking_level": "medium",
+        "max_output_tokens": 16384,
+        "temperature": 0.0
+    },
+    "integrity": {
+        "prompt_sha256": "b16d4dfb9d1437e47bf974b0555777c1025114f8e69c1d60b0f717d068d87e88",
+        "response_sha256": "85509c0c2ce79066ae57a1c6d30c6e7ab46d5c7409f542f3c44765351393117e",
+        "code_sha256": "85509c0c2ce79066ae57a1c6d30c6e7ab46d5c7409f542f3c44765351393117e"
+    },
+    "response_characters": 4262,
+    "code_characters": 4262
+}

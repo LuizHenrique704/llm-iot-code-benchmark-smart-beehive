@@ -1,0 +1,66 @@
+Você deve gerar um sketch completo em C++ utilizando o framework Arduino para uma placa ESP32 Dev Module.
+
+O objetivo deste código é testar exclusivamente a comunicação da ESP32 com um rádio LoRa E32-TTL-100.
+
+Utilize obrigatoriamente:
+
+* Placa: ESP32 Dev Module
+* Rádio: E32-TTL-100
+* Biblioteca: LoRa_E32
+* Comunicação com o rádio: UART2
+* Biblioteca HardwareSerial
+
+Conexões:
+
+* RX da ESP32: GPIO 16
+* TX da ESP32: GPIO 17
+* AUX do E32: GPIO 5
+* M0 do E32: GPIO 18
+* M1 do E32: GPIO 19
+
+UART:
+
+* Baud rate: 9600
+* Configuração: SERIAL_8N1
+
+Configure o rádio transmissor com:
+
+* ADDH: 0
+* ADDL: 1
+* CHAN: 13
+* UART baud rate: UART_BPS_9600
+* UART parity: MODE_00_8N1
+* Air data rate: AIR_DATA_RATE_010_24
+* Wireless wake-up time: WAKE_UP_250
+* I/O drive mode: IO_D_MODE_PUSH_PULLS_PULL_UPS
+* FEC: FEC_0_OFF
+* Transmission power: POWER_20
+* Fixed transmission: FT_FIXED_TRANSMISSION
+
+O receptor de destino possui:
+
+* ADDH: 0
+* ADDL: 3
+* CHAN: 13
+
+O programa deve:
+
+1. Inicializar corretamente a UART2.
+2. Inicializar o E32-TTL-100.
+3. Aplicar as configurações especificadas ao módulo.
+4. Colocar o rádio em modo normal após a configuração.
+5. A cada 5 segundos transmitir, utilizando transmissão fixa, a mensagem:
+
+teste_lora
+
+para:
+
+ADDH = 0
+ADDL = 3
+CHAN = 13
+
+6. Mostrar pela porta serial se a transmissão foi realizada com sucesso ou se ocorreu erro.
+
+Não utilize BME280, MC-38, Wi-Fi, Bluetooth ou outros sensores.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.

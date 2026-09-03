@@ -1,0 +1,30 @@
+Você deve gerar um sketch completo em C++ utilizando o framework Arduino para uma placa ESP32 Dev Module.
+
+O objetivo deste código é testar exclusivamente a comunicação da ESP32 com um sensor magnético MC-38 utilizado para detectar a abertura de uma colmeia.
+
+Utilize:
+
+* Placa: ESP32 Dev Module
+* Sensor: MC-38
+* GPIO: 4
+* Configuração do GPIO: INPUT_PULLUP
+* Comunicação serial: 115200 baud
+
+Considere obrigatoriamente:
+
+* HIGH = colmeia aberta
+* LOW = colmeia fechada
+
+O programa deve:
+
+1. Configurar corretamente o GPIO 4.
+2. Ler o estado inicial do sensor.
+3. Informar pela porta serial se a colmeia está aberta ou fechada.
+4. Continuar monitorando o sensor.
+5. Sempre que ocorrer mudança entre aberto e fechado, informar imediatamente o novo estado pela porta serial.
+6. Evitar impressões repetidas continuamente quando o estado não tiver mudado.
+7. Implementar um tratamento simples para evitar múltiplas detecções causadas por oscilações rápidas do contato.
+
+Não utilize BME280, LoRa, Wi-Fi, Bluetooth ou outros sensores.
+
+Retorne SOMENTE o sketch completo e compilável, sem explicações, comentários externos ou blocos Markdown.

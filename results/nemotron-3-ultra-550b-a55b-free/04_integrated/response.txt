@@ -4,7 +4,8 @@
 #include <Adafruit_BME280.h>
 #include <LoRa_E32.h>
 #include <esp_sleep.h>
-#include <esp_wifi.h>
+#include <esp_mac.h>
+#include <cstring>
 
 #define SDA_PIN 21
 #define SCL_PIN 22
@@ -17,40 +18,76 @@
 #define M0_PIN 18
 #define M1_PIN 19
 
-#define SENSOR_PIN 4
+#define MC38_PIN 4
 
-#define WAKEUP_GPIO GPIO_NUM_4
-#define SLEEP_DURATION_US (60ULL * 60 * 1000000)
+#define MY_ADDH 0x00
+#define MY_ADDL 0x01
+#define MY_CHAN 0x0D
+
+#define DEST_ADDH 0x00
+#define DEST_ADDL 0x03
+#define DEST_CHAN 0x0D
+
+#define WAKEUP_INTERVAL_US (60ULL * 60 * 1000000)
 
 #pragma pack(push, 1)
-struct Payload {
-  char identifier[8];
+struct SensorPayload {
+  char id[8];
   uint8_t mac[6];
   float temperature;
   float humidity;
   float pressure;
   float altitude;
   uint8_t hiveState;
-  uint32_t txCounter;
+  uint32_t counter;
 };
 #pragma pack(pop)
 
-RTC_DATA_ATTR uint32_t bootCount = 0;
 RTC_DATA_ATTR uint32_t txCounter = 0;
 
 Adafruit_BME280 bme;
 HardwareSerial LoRaSerial(2);
 LoRa_E32 e32ttl(&LoRaSerial, AUX_PIN, M0_PIN, M1_PIN);
 
-void setupLoRaConfig() {
+void goToSleep() {
+  esp_sleep_enable_timer_wakeup(WAKEUP_INTERVAL_US);
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_4, 1);
+  Serial.flush();
+  esp_deep_sleep_start();
+}
+
+void setup() {
+  setCpuFrequencyMhz(40);
+  Serial.begin(115200);
+  delay(100);
+
+  txCounter++;
+
+  Wire.begin(SDA_PIN, SCL_PIN);
+
+  if (!bme.begin(BME280_ADDRESS, &Wire)) {
+    Serial.println("Erro: BME280 nao encontrado.");
+    goToSleep();
+  }
+
+  LoRaSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+
+  if (!e32ttl.begin()) {
+    Serial.println("Erro: Falha ao inicializar modulo LoRa.");
+    goToSleep();
+  }
+
   ResponseStructContainer c = e32ttl.getConfiguration();
-  if (c.status.code != 1) return;
+  if (c.status.code != 1) {
+    Serial.println("Erro: Falha ao ler configuracao LoRa.");
+    goToSleep();
+  }
   Configuration configuration = *(Configuration*)c.data;
   c.close();
 
-  configuration.ADDH = 0x00;
-  configuration.ADDL = 0x01;
-  configuration.CHAN = 0x0D;
+  configuration.ADDH = MY_ADDH;
+  configuration.ADDL = MY_ADDL;
+  configuration.CHAN = MY_CHAN;
 
   configuration.SPED.uartBaudRate = UART_BPS_9600;
   configuration.SPED.uartParity = MODE_00_8N1;
@@ -62,85 +99,54 @@ void setupLoRaConfig() {
   configuration.OPTION.transmissionPower = POWER_20;
   configuration.OPTION.fixedTransmission = FT_FIXED_TRANSMISSION;
 
-  e32ttl.setConfiguration(configuration, WRITE_CFG_PWR_DWN_SAVE);
-  e32ttl.setMode(MODE_0_NORMAL);
-}
-
-bool readSensors(Payload &data) {
-  float t = bme.readTemperature();
-  float h = bme.readHumidity();
-  float p = bme.readPressure() / 100.0F;
-  float a = bme.readAltitude(SEALEVELPRESSURE_HPA);
-
-  if (isnan(t) || isnan(h) || isnan(p) || isnan(a)) {
-    return false;
+  ResponseStatus rs = e32ttl.setConfiguration(configuration, WRITE_CFG_PWR_DWN_SAVE);
+  if (rs.code != 1) {
+    Serial.println("Erro: Falha ao salvar configuracao LoRa.");
+    goToSleep();
   }
 
-  data.temperature = t;
-  data.humidity = h;
-  data.pressure = p;
-  data.altitude = a;
-  data.hiveState = (digitalRead(SENSOR_PIN) == HIGH) ? 1 : 0;
-  return true;
-}
+  ResponseStatus rsMode = e32ttl.setMode(MODE_0_NORMAL);
+  if (rsMode.code != 1) {
+    Serial.println("Erro: Falha ao definir modo normal LoRa.");
+    goToSleep();
+  }
 
-void sendPayload(const Payload &data) {
-  ResponseStatus rs = e32ttl.sendFixedMessage(0x00, 0x03, 0x0D, (uint8_t*)&data, sizeof(Payload));
-  (void)rs;
-}
+  float temperature = bme.readTemperature();
+  float humidity = bme.readHumidity();
+  float pressure = bme.readPressure() / 100.0F;
+  float altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
 
-void enterDeepSleep() {
+  if (isnan(temperature) || isnan(humidity) || isnan(pressure)) {
+    Serial.println("Erro: Leitura invalida BME280.");
+    goToSleep();
+  }
+
+  pinMode(MC38_PIN, INPUT_PULLUP);
+  delay(10);
+  uint8_t hiveState = digitalRead(MC38_PIN);
+
+  uint8_t mac[6];
+  esp_read_mac(mac, ESP_MAC_WIFI_STA);
+
+  SensorPayload payload;
+  strcpy(payload.id, "colmeia");
+  memcpy(payload.mac, mac, 6);
+  payload.temperature = temperature;
+  payload.humidity = humidity;
+  payload.pressure = pressure;
+  payload.altitude = altitude;
+  payload.hiveState = hiveState;
+  payload.counter = txCounter;
+
+  ResponseStatus rsSend = e32ttl.sendFixedMessage(DEST_ADDH, DEST_ADDL, DEST_CHAN, &payload, sizeof(payload));
+  if (rsSend.code != 1) {
+    Serial.println("Erro: Falha no envio LoRa.");
+  }
+
   e32ttl.setMode(MODE_3_SLEEP);
   delay(100);
-  LoRaSerial.end();
-  pinMode(RX_PIN, INPUT);
-  pinMode(TX_PIN, INPUT);
-  pinMode(AUX_PIN, INPUT);
-  pinMode(M0_PIN, INPUT);
-  pinMode(M1_PIN, INPUT);
 
-  esp_sleep_enable_timer_wakeup(SLEEP_DURATION_US);
-  esp_sleep_enable_ext0_wakeup(WAKEUP_GPIO, 1);
-
-  esp_deep_sleep_start();
-}
-
-void setup() {
-  setCpuFrequencyMhz(40);
-  Serial.begin(115200);
-  delay(100);
-
-  bootCount++;
-
-  Wire.begin(SDA_PIN, SCL_PIN);
-  if (!bme.begin(BME280_ADDRESS, &Wire)) {
-    enterDeepSleep();
-  }
-
-  pinMode(SENSOR_PIN, INPUT_PULLUP);
-
-  LoRaSerial.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
-  if (!e32ttl.begin()) {
-    enterDeepSleep();
-  }
-
-  setupLoRaConfig();
-
-  Payload payload;
-  memset(&payload, 0, sizeof(Payload));
-  strncpy(payload.identifier, "colmeia", sizeof(payload.identifier) - 1);
-  uint64_t chipid = ESP.getEfuseMac();
-  for (int i = 0; i < 6; i++) {
-    payload.mac[i] = (chipid >> (40 - i * 8)) & 0xFF;
-  }
-  payload.txCounter = txCounter;
-
-  if (readSensors(payload)) {
-    sendPayload(payload);
-    txCounter++;
-  }
-
-  enterDeepSleep();
+  goToSleep();
 }
 
 void loop() {

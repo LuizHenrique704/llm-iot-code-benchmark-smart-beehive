@@ -1,6 +1,6 @@
-#include <Arduino.h>
 #include <LoRa_E32.h>
 #include <ArduinoJson.h>
+#include <WiFi.h>
 
 #define LORA_RX 16
 #define LORA_TX 17
@@ -15,10 +15,9 @@ void setup() {
   Serial.begin(115200);
   SerialLora.begin(9600, SERIAL_8N1, LORA_RX, LORA_TX);
   delay(200);
-
   if (lora.begin() != 0) {
-    Serial.println("LoRa init error");
-    while (true) delay(100);
+    Serial.println("LoRa begin error");
+    while (true);
   }
 
   Configuration cfg;
@@ -35,11 +34,11 @@ void setup() {
   cfg.WOR = WAKE_UP_250;
   cfg.FEC = FEC_0_OFF;
   cfg.IO_DRIVE_MODE = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+  cfg.FIXED_TRANSMISSION = FT_FIXED_TRANSMISSION;
   if (lora.setConfiguration(cfg) != 0) {
     Serial.println("LoRa config error");
-    while (true) delay(100);
+    while (true);
   }
-
   lora.setMode(MODE_0_NORMAL);
 }
 
@@ -47,64 +46,46 @@ void loop() {
   uint8_t buffer[256];
   uint16_t len = sizeof(buffer);
   int ret = lora.receiveMessage(buffer, &len);
-  if (ret == 0) {
-    if (len >= sizeof(buffer)) len = sizeof(buffer) - 1;
-    buffer[len] = 0; // null‑terminate
-
+  if (ret == 0 && len > 0) {
+    buffer[len] = 0;
+    String payload = (char *)buffer;
     StaticJsonDocument<256> doc;
-    DeserializationError err = deserializeJson(doc, (char *)buffer);
+    DeserializationError err = deserializeJson(doc, payload);
     if (err) {
       Serial.print("JSON parse error: ");
       Serial.println(err.c_str());
-      return;
-    }
-
-    const char *id = doc["id"];
-    if (!id || strcmp(id, "colmeia") != 0) {
-      // not a hive packet
-      return;
-    }
-
-    const char *mac = doc["mac"];
-    float temp = doc["temp"];
-    float hum  = doc["hum"];
-    float pres = doc["pres"];
-    float alt  = doc["alt"];
-    const char *estado = doc["estado"];
-    unsigned long cnt = doc["cnt"];
-
-    Serial.print("MAC: ");
-    Serial.println(mac ? mac : "N/A");
-
-    Serial.print("Temperatura: ");
-    Serial.print(temp, 2);
-    Serial.println(" C");
-
-    Serial.print("Umidade: ");
-    Serial.print(hum, 2);
-    Serial.println(" %");
-
-    Serial.print("Pressao: ");
-    Serial.print(pres, 2);
-    Serial.println(" hPa");
-
-    Serial.print("Altitude: ");
-    Serial.print(alt, 2);
-    Serial.println(" m");
-
-    Serial.print("Estado: ");
-    if (estado && strcmp(estado, "aberta") == 0) {
-      Serial.println("ABERTA");
+    } else if (doc["id"] == "colmeia") {
+      const char *mac = doc["mac"];
+      float temp = doc["temp"];
+      float hum = doc["hum"];
+      float pres = doc["pres"];
+      float alt = doc["alt"];
+      const char *estado = doc["estado"];
+      unsigned long cnt = doc["cnt"];
+      Serial.print("MAC: ");
+      Serial.println(mac);
+      Serial.print("Temperatura: ");
+      Serial.print(temp, 2);
+      Serial.println(" C");
+      Serial.print("Umidade: ");
+      Serial.print(hum, 2);
+      Serial.println(" %");
+      Serial.print("Pressao: ");
+      Serial.print(pres, 2);
+      Serial.println(" hPa");
+      Serial.print("Altitude: ");
+      Serial.print(alt, 2);
+      Serial.println(" m");
+      Serial.print("Estado: ");
+      Serial.println(strcmp(estado, "aberta") == 0 ? "ABERTA" : "FECHADA");
+      Serial.print("Contador: ");
+      Serial.println(cnt);
     } else {
-      Serial.println("FECHADA");
+      Serial.println("Mensagem ignorada (id diferente)");
     }
-
-    Serial.print("Contador: ");
-    Serial.println(cnt);
-  } else {
-    Serial.print("Receive error: ");
+  } else if (ret != 0) {
+    Serial.print("Erro de recepcao: ");
     Serial.println(ret);
   }
-
-  delay(10);
+  delay(100);
 }

@@ -4,32 +4,33 @@
     "requested_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
     "returned_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
     "task": "05_receiver",
-    "timestamp_utc": "2026-09-03T14:03:05.000035+00:00",
+    "timestamp_utc": "2026-09-03T22:47:08.601916+00:00",
     "prompt_file": "results/nemotron-3-ultra-550b-a55b-free/05_receiver/prompt_generated.txt",
-    "response_id": "gen-1788444073-Y95N3QhS62OFkwZcnUeg",
+    "response_id": "gen-1788475594-KkS3WRVc1oMYS8mDmQdp",
     "system_fingerprint": null,
-    "latency_seconds": 127.198677,
-    "first_content_latency_seconds": 94.961434,
+    "latency_seconds": 36.360145,
+    "first_content_latency_seconds": 12.118167,
     "tokens": {
         "input": 1942,
-        "output": 1271,
-        "reasoning": 201,
+        "output": 1306,
+        "reasoning": 243,
         "cached": 0,
-        "total": 3213
+        "total": 3248
     },
     "cost": 0,
     "generation_config": {
         "max_output_tokens": 16384,
+        "temperature": 0.0,
         "stream": true
     },
     "raw_usage": {
-        "completion_tokens": 1271,
+        "completion_tokens": 1306,
         "prompt_tokens": 1942,
-        "total_tokens": 3213,
+        "total_tokens": 3248,
         "completion_tokens_details": {
             "accepted_prediction_tokens": null,
             "audio_tokens": 0,
-            "reasoning_tokens": 201,
+            "reasoning_tokens": 243,
             "rejected_prediction_tokens": null,
             "text_tokens": null,
             "image_tokens": 0
@@ -52,10 +53,10 @@
     },
     "integrity": {
         "prompt_sha256": "bc67e785fc32229898922024be64e8d9c743d9391f50cc26cdd670b4795e3b3a",
-        "response_sha256": "17efb4028ef024ae6de7aaa21f54e7c6057024b56c718f409ab1153a79faba61",
-        "code_sha256": "17efb4028ef024ae6de7aaa21f54e7c6057024b56c718f409ab1153a79faba61"
+        "response_sha256": "639a72071ce62505b900f31c53086d1b19c5a76b991a6ba37fa1b3008eeb1197",
+        "code_sha256": "639a72071ce62505b900f31c53086d1b19c5a76b991a6ba37fa1b3008eeb1197"
     },
     "prompt_characters": 5941,
-    "response_characters": 3215,
-    "code_characters": 3215
+    "response_characters": 3222,
+    "code_characters": 3222
 }

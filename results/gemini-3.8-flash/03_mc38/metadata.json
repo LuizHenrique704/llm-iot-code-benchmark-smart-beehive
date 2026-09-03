@@ -1,0 +1,30 @@
+{
+    "provider": "Google",
+    "model": "gemini-3.8-flash",
+    "task": "03_mc38",
+    "timestamp_utc": "2026-09-03T19:16:54.862785+00:00",
+    "prompt_file": "prompts/03_mc38.txt",
+    "response_id": "iceZavDkKpOdz7IPiqyloQo",
+    "latency_seconds": 31.169048,
+    "first_chunk_latency_seconds": 31.079528,
+    "tokens": {
+        "input": 303,
+        "output": 292,
+        "thought": 988,
+        "cached": null,
+        "tool_use": null,
+        "total": 1583
+    },
+    "generation_config": {
+        "thinking_level": "medium",
+        "max_output_tokens": 16384,
+        "temperature": 0.0
+    },
+    "integrity": {
+        "prompt_sha256": "b79c79285baeade55f891343067e05a753e8bd748c579233ac5aa7c272d74ef6",
+        "response_sha256": "43144f887ad26e973d6561b9e618e8d1bdb863be9ec7165961ebc7a2ae12b773",
+        "code_sha256": "43144f887ad26e973d6561b9e618e8d1bdb863be9ec7165961ebc7a2ae12b773"
+    },
+    "response_characters": 914,
+    "code_characters": 914
+}

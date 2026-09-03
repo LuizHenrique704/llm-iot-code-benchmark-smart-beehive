@@ -1,17 +1,12 @@
 const int sensorPin = 4;
-const int debounceDelay = 50;
-
-int lastState;
-int currentState;
+int prevSensorState;
+int currentSensorState;
 
 void setup() {
   pinMode(sensorPin, INPUT_PULLUP);
   Serial.begin(115200);
-
-  currentState = digitalRead(sensorPin);
-  lastState = currentState;
-
-  if (currentState == HIGH) {
+  prevSensorState = digitalRead(sensorPin);
+  if (prevSensorState == HIGH) {
     Serial.println("Colmeia aberta");
   } else {
     Serial.println("Colmeia fechada");
@@ -19,21 +14,18 @@ void setup() {
 }
 
 void loop() {
-  currentState = digitalRead(sensorPin);
-
-  if (currentState != lastState) {
-    delay(debounceDelay);
-
-    currentState = digitalRead(sensorPin);
-
-    if (currentState != lastState) {
-      lastState = currentState;
-
-      if (currentState == HIGH) {
+  currentSensorState = digitalRead(sensorPin);
+  if (currentSensorState != prevSensorState) {
+    delay(50);
+    currentSensorState = digitalRead(sensorPin);
+    if (currentSensorState != prevSensorState) {
+      prevSensorState = currentSensorState;
+      if (currentSensorState == HIGH) {
         Serial.println("Colmeia aberta");
       } else {
         Serial.println("Colmeia fechada");
       }
     }
   }
+  delay(10);
 }

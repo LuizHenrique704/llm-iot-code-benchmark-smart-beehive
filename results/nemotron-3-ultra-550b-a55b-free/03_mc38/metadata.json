@@ -4,32 +4,33 @@
     "requested_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
     "returned_model": "nvidia/nemotron-3-ultra-550b-a55b:free",
     "task": "03_mc38",
-    "timestamp_utc": "2026-09-03T13:58:12.234597+00:00",
+    "timestamp_utc": "2026-09-03T22:41:50.689539+00:00",
     "prompt_file": "prompts/03_mc38.txt",
-    "response_id": "gen-1788443770-FBgQPh6psAsEcbYKRMQ0",
+    "response_id": "gen-1788475292-fc0H0UknLl8mnfbkGXew",
     "system_fingerprint": null,
-    "latency_seconds": 128.822946,
-    "first_content_latency_seconds": 123.509763,
+    "latency_seconds": 20.677751,
+    "first_content_latency_seconds": 17.292256,
     "tokens": {
         "input": 315,
-        "output": 446,
-        "reasoning": 150,
+        "output": 600,
+        "reasoning": 251,
         "cached": 0,
-        "total": 761
+        "total": 915
     },
     "cost": 0,
     "generation_config": {
         "max_output_tokens": 16384,
+        "temperature": 0.0,
         "stream": true
     },
     "raw_usage": {
-        "completion_tokens": 446,
+        "completion_tokens": 600,
         "prompt_tokens": 315,
-        "total_tokens": 761,
+        "total_tokens": 915,
         "completion_tokens_details": {
             "accepted_prediction_tokens": null,
             "audio_tokens": 0,
-            "reasoning_tokens": 150,
+            "reasoning_tokens": 251,
             "rejected_prediction_tokens": null,
             "text_tokens": null,
             "image_tokens": 0
@@ -52,10 +53,10 @@
     },
     "integrity": {
         "prompt_sha256": "b79c79285baeade55f891343067e05a753e8bd748c579233ac5aa7c272d74ef6",
-        "response_sha256": "7454a33c6711e0287f4d31953e2c6a588bbdd86c1261a09360b1e3af08a78b57",
-        "code_sha256": "7454a33c6711e0287f4d31953e2c6a588bbdd86c1261a09360b1e3af08a78b57"
+        "response_sha256": "badf656ee089f5874dc8a216ac42469cf4db5c5a62eb94ec0da2e5733cc575af",
+        "code_sha256": "badf656ee089f5874dc8a216ac42469cf4db5c5a62eb94ec0da2e5733cc575af"
     },
     "prompt_characters": 1137,
-    "response_characters": 953,
-    "code_characters": 953
+    "response_characters": 1047,
+    "code_characters": 1047
 }

@@ -4,50 +4,51 @@
     "requested_model": "openai/gpt-oss-120b",
     "returned_model": "openai/gpt-oss-120b",
     "task": "05_receiver",
-    "timestamp_utc": "2026-09-03T13:31:05.650809+00:00",
+    "timestamp_utc": "2026-09-03T20:51:56.511183+00:00",
     "prompt_file": "results/gpt-oss-120b/05_receiver/prompt_generated.txt",
-    "response_id": "chatcmpl-fe14e542-4dd3-462c-b556-070f67539736",
-    "groq_request_id": "req_01m1kqee5qe8ms3nezhpt3g42r",
-    "system_fingerprint": "fp_4140daa9c2",
-    "latency_seconds": 4.261887,
-    "first_content_latency_seconds": 2.676873,
+    "response_id": "chatcmpl-6237635b-9564-471f-8e69-bdd927968e9a",
+    "groq_request_id": "req_01m1mgnn6yea4bafsd0p65my3k",
+    "system_fingerprint": "fp_8db49de948",
+    "latency_seconds": 4.522524,
+    "first_content_latency_seconds": 2.991802,
     "provider_timing": {
-        "queue_time_seconds": 0.150432796,
-        "prompt_time_seconds": 0.083646952,
-        "completion_time_seconds": 3.678328827,
-        "total_time_seconds": 3.761975779
+        "queue_time_seconds": 0.273159554,
+        "prompt_time_seconds": 0.080214138,
+        "completion_time_seconds": 3.418369201,
+        "total_time_seconds": 3.498583339
     },
     "tokens": {
         "input": 1703,
-        "output": 1732,
-        "reasoning": 947,
+        "output": 1632,
+        "reasoning": 874,
         "cached": null,
-        "total": 3435
+        "total": 3335
     },
     "generation_config": {
         "max_output_tokens": 16384,
+        "temperature": 0.0,
         "reasoning_effort": "medium",
         "reasoning_format": "hidden",
         "stream": true
     },
     "raw_usage": {
-        "completion_tokens": 1732,
+        "completion_tokens": 1632,
         "prompt_tokens": 1703,
-        "total_tokens": 3435,
-        "completion_time": 3.678328827,
+        "total_tokens": 3335,
+        "completion_time": 3.418369201,
         "completion_tokens_details": {
-            "reasoning_tokens": 947
+            "reasoning_tokens": 874
         },
-        "prompt_time": 0.083646952,
+        "prompt_time": 0.080214138,
         "prompt_tokens_details": null,
-        "queue_time": 0.150432796,
-        "total_time": 3.761975779
+        "queue_time": 0.273159554,
+        "total_time": 3.498583339
     },
     "integrity": {
         "prompt_sha256": "718e79eae886e753585c6107805edfc771638e1dc18d077b1b85b3a9a42d8dd1",
-        "response_sha256": "53986d0cfdbe37a89ed60329410e6a7d2ecafbcc9ce37c87b943c4a298b83043",
-        "code_sha256": "6de08af1b8d7aa72481f0058008873f936d966cbc6e5235934b0df64b5bca1f7"
+        "response_sha256": "ce43469e5b86c81e79543cbe7912037e8f569912abad5111f20c06bc010db51b",
+        "code_sha256": "020c18c8b5cc69cdb984dba286e2aa9820f598e06cdb3040b672271091dc1535"
     },
-    "response_characters": 2518,
-    "code_characters": 2517
+    "response_characters": 2462,
+    "code_characters": 2461
 }

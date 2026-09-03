@@ -1,0 +1,266 @@
+Okay, let's see. I need to create a receiver sketch for an ESP32 that works with the E32-TTL-100 LoRa module. The transmitter code is already provided, so I need to make sure the receiver matches its configuration and data structure.
+
+First, the receiver should use UART2 with RX on GPIO16 and TX on GPIO17. The AUX pin is GPIO5, M0 is 18, M1 is 19. The UART settings are 9600 baud, 8N1. The E32 module needs to be configured with ADDH=0, ADDL=3, CHAN=13, and other parameters as specified.
+
+The data structure from the transmitter is a packed struct with identifier, mac, temperature, humidity, pressure, altitude, hiveState, and transmissions. The receiver needs to parse this struct correctly.
+
+I need to initialize the E32 module in normal mode after setting all the parameters. Then, the receiver should wait for incoming messages. When a message is received, it should check if the identifier is "colmeia". If it is, extract the data and print it in the specified format.
+
+The output should show MAC, temperature, humidity, pressure, altitude, hive state as ABERTA or FECHADA, and the transmission count. Also, handle errors in reception by printing an error message.
+
+I should make sure that only the latest data is kept in memory, no history. So, each time a new packet is received, the previous data is replaced.
+
+Let me start by including the necessary libraries: Wire, Adafruit_BME280 (though the receiver might not need the sensor, but the struct is the same), LoRa_E32, HardwareSerial, and esp_sleep. Wait, the receiver doesn't need the BME280, but the struct is the same. So maybe I can omit the BME280 includes and setup.
+
+Wait, the receiver's code doesn't need to read from the BME280, so I can remove those parts. The struct is the same, so I need to define it in the receiver as well.
+
+The setup function for the receiver should initialize the UART, configure the E32 module with the given parameters, set it to normal mode, and then start listening.
+
+In the loop, the receiver should check for incoming messages. The LoRa_E32 library probably has a method to receive messages. The receiveFixedMessage function might be used here.
+
+Wait, the transmitter uses sendFixedMessage, so the receiver should use receiveFixedMessage. The parameters for receiveFixedMessage would be the ADDH and ADDL of the sender. Since the transmitter's ADDL is 1, and the receiver's ADDL is 3, maybe the receiver is set to listen to messages from ADDH=0, ADDL=1.
+
+Wait, the E32 module's addressing: the receiver's ADDH and ADDL are set to 0 and 3. The transmitter's ADDH and ADDL are 0 and 1. So the receiver is set to receive messages from ADDH=0, ADDL=1. So in the receiveFixedMessage, the parameters would be 0, 1, 13 (the channel). Wait, the channel is 13, so the third parameter is the channel.
+
+So the receiveFixedMessage function would be called with (0, 1, 13, ...). The function returns the number of bytes received. Then, we can check if the data is valid.
+
+Once the data is received, we need to parse the struct. The struct is packed, so we can cast the received buffer to the TelemetryData struct.
+
+Then, check if the identifier is "colmeia". If yes, process the data.
+
+For the MAC address, the struct has a 6-byte array. We need to format it as AA:BB:CC:DD:EE.
+
+The hiveState is 1 or 0, which translates to ABERTA or FECHADA.
+
+The transmission count is a uint32_t, so we can print it as a number.
+
+Now, the receiver should not store any history. So, each time a new packet is received, the previous data is overwritten. So, we can have a global variable of type TelemetryData to hold the latest data.
+
+In the loop, after receiving, we check if the data is valid. If it is, we update the global variable and print the data.
+
+Error handling: if the receive function returns an error, print an error message.
+
+Let me structure the code:
+
+- Include necessary libraries.
+- Define the struct.
+- Initialize the E32 module with the given parameters.
+- In setup, configure the E32, set to normal mode.
+- In loop, check for incoming messages.
+- When a message is received, parse it, check identifier, and print.
+
+Wait, the receiver's setup should configure the E32 module. The parameters are:
+
+setMode(MODE_CONFIG)
+setAddH(0)
+setAddL(3)
+setChan(13)
+setUARTbaud(UART_BPS_9600)
+setUARTparity(MODE_00_8N1)
+setAirdatarate(AIR_DATA_RATE_010_24)
+setWakeup(WAKE_UP_250)
+setIO_Mode(IO_D_MODE_PUSH_PULLS_PULL_UPS)
+setFEC(FEC_0_OFF)
+setPower(POWER_20)
+setFixedTransmission(FT_FIXED_TRANSMISSION)
+saveParams()
+setMode(MODE_NORMAL)
+
+Then, in the loop, call receiveFixedMessage with the sender's ADDH and ADDL (0 and 1), channel 13.
+
+The receiveFixedMessage function returns the number of bytes received. If it's positive, we can process the data.
+
+So, in the loop:
+
+while (true) {
+    int result = e32ttl.receiveFixedMessage(0, 1, 13, buffer, sizeof(buffer));
+    if (result > 0) {
+        // process buffer
+    }
+}
+
+But the buffer needs to be of size sizeof(TelemetryData). So, we can have a buffer of that size.
+
+Wait, the receiveFixedMessage function's parameters are: ADDH, ADDL, CHAN, buffer, buffer_size. So, the buffer is where the received data is stored.
+
+So, in the code:
+
+uint8_t buffer[sizeof(TelemetryData)];
+int result = e32ttl.receiveFixedMessage(0, 1, 13, buffer, sizeof(buffer));
+
+If result is positive, then we can cast buffer to TelemetryData.
+
+Then, check if the identifier is "colmeia".
+
+If yes, then process and print.
+
+Now, the struct is packed, so the data should be correctly aligned.
+
+For the MAC address, the struct has a 6-byte array. To print it as AA:BB:CC:DD:EE, we can loop through each byte and format it.
+
+The hiveState is 1 or 0. So, if data.hiveState is 1, it's ABERTA, else FECHADA.
+
+The transmission count is data.transmissions.
+
+Now, the output format:
+
+MAC: AA:BB:CC:DD:EE
+Temperatura: 32.40 C
+Umidade: 61.20 %
+Pressao: 1008.30 hPa
+Altitude: 42.10 m
+Estado: FECHADA
+Contador: 15
+
+So, each line is printed with the corresponding data.
+
+Now, the code structure:
+
+Include the necessary headers.
+
+Define the struct.
+
+Initialize the E32 module.
+
+In setup, configure the E32.
+
+In loop, check for messages.
+
+Handle errors.
+
+Now, the receiver doesn't need to use the BME280, so those includes and setup can be omitted.
+
+Wait, the struct is the same as the transmitter's, so the receiver needs to have the same struct definition.
+
+So, the code would look like:
+
+#include <Wire.h>
+#include <LoRa_E32.h>
+#include <HardwareSerial.h>
+#include "esp_sleep.h"
+
+#define UART_RX 16
+#define UART_TX 17
+#define AUX_PIN 5
+#define M0_PIN 18
+#define M1_PIN 19
+
+HardwareSerial uart2(2);
+LoRa_E32 e32ttl(&uart2, AUX_PIN, M0_PIN, M1_PIN);
+
+typedef struct __attribute__((packed)) {
+    char identifier[8];
+    uint8_t mac[6];
+    float temperature;
+    float humidity;
+    float pressure;
+    float altitude;
+    uint8_t hiveState;
+    uint32_t transmissions;
+} TelemetryData;
+
+TelemetryData latestData;
+
+void setup() {
+    Serial.begin(115200);
+    delay(100);
+
+    uart2.begin(9600, SERIAL_8N1, UART_RX, UART_TX);
+    delay(100);
+
+    e32ttl.setMode(MODE_CONFIG);
+    e32ttl.setAddH(0);
+    e32ttl.setAddL(3);
+    e32ttl.setChan(13);
+    e32ttl.setUARTbaud(UART_BPS_9600);
+    e32ttl.setUARTparity(MODE_00_8N1);
+    e32ttl.setAirdatarate(AIR_DATA_RATE_010_24);
+    e32ttl.setWakeup(WAKE_UP_250);
+    e32ttl.setIO_Mode(IO_D_MODE_PUSH_PULLS_PULL_UPS);
+    e32ttl.setFEC(FEC_0_OFF);
+    e32ttl.setPower(POWER_20);
+    e32ttl.setFixedTransmission(FT_FIXED_TRANSMISSION);
+    e32ttl.saveParams();
+    e32ttl.setMode(MODE_NORMAL);
+}
+
+void loop() {
+    uint8_t buffer[sizeof(TelemetryData)];
+    int result = e32ttl.receiveFixedMessage(0, 1, 13, buffer, sizeof(buffer));
+
+    if (result > 0) {
+        TelemetryData* data = (TelemetryData*)buffer;
+
+        if (strcmp(data->identifier, "colmeia") == 0) {
+            latestData = *data;
+
+            // Print MAC
+            Serial.print("MAC: ");
+            for (int i = 0; i < 6; i++) {
+                if (i > 0) Serial.print(":");
+                Serial.print(latestData.mac[i], HEX);
+            }
+            Serial.println();
+
+            // Print temperature
+            Serial.print("Temperatura: ");
+            Serial.print(latestData.temperature, 2);
+            Serial.println(" C");
+
+            // Print humidity
+            Serial.print("Umidade: ");
+            Serial.print(latestData.humidity, 2);
+            Serial.println(" %");
+
+            // Print pressure
+            Serial.print("Pressao: ");
+            Serial.print(latestData.pressure, 2);
+            Serial.println(" hPa");
+
+            // Print altitude
+            Serial.print("Altitude: ");
+            Serial.print(latestData.altitude, 2);
+            Serial.println(" m");
+
+            // Print hive state
+            Serial.print("Estado: ");
+            if (latestData.hiveState == 1) {
+                Serial.println("ABERTA");
+            } else {
+                Serial.println("FECHADA");
+            }
+
+            // Print transmission count
+            Serial.print("Contador: ");
+            Serial.println(latestData.transmissions);
+        }
+    } else if (result < 0) {
+        Serial.println("Erro na recepcao do pacote.");
+    }
+}
+
+Wait, but the receiveFixedMessage function's parameters are ADDH, ADDL, CHAN, buffer, buffer_size. The ADDH and ADDL are the sender's address. Since the transmitter's ADDH is 0 and ADDL is 1, the receiver should listen to messages from that address. So the parameters are 0, 1, 13.
+
+But in the code above, the receiveFixedMessage is called with (0, 1, 13, buffer, sizeof(buffer)). That should be correct.
+
+Also, the buffer is of size sizeof(TelemetryData), which is correct.
+
+The code checks if the identifier is "colmeia" before processing. If it is, it copies the data into latestData and prints it.
+
+The MAC is printed as hex with colons. The temperature, humidity, pressure, altitude are printed with two decimal places.
+
+The hiveState is checked to be 1 or 0, and printed as ABERTA or FECHADA.
+
+The transmission count is printed as a number.
+
+If the result is negative, an error message is printed.
+
+This should meet all the requirements. The receiver doesn't store any history, just the latest data. The loop is continuous, checking for messages.
+
+I need to make sure that the struct is packed, which it is with __attribute__((packed)).
+
+Also, the UART is initialized correctly with the right pins and settings.
+
+The E32 module is configured with the specified parameters.
+
+Yes, this should work.

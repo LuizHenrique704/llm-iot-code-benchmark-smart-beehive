@@ -1,0 +1,30 @@
+{
+    "provider": "Google",
+    "model": "gemini-3.8-flash",
+    "task": "01_bme280",
+    "timestamp_utc": "2026-09-03T19:01:45.936045+00:00",
+    "prompt_file": "prompts/01_bme280.txt",
+    "response_id": "CMSZarSxC7m8jrEPwIme6Qo",
+    "latency_seconds": 34.619464,
+    "first_chunk_latency_seconds": 34.527589,
+    "tokens": {
+        "input": 373,
+        "output": 524,
+        "thought": 1094,
+        "cached": null,
+        "tool_use": null,
+        "total": 1991
+    },
+    "generation_config": {
+        "thinking_level": "medium",
+        "max_output_tokens": 16384,
+        "temperature": 0.0
+    },
+    "integrity": {
+        "prompt_sha256": "c0659a1a8561a538bd7d4f533bd28e4576c69bf722632aee499064f606befa6a",
+        "response_sha256": "f27c426661efe965c03096cd53be31bf55ed7599ddeb82403a10deaf27dd92d6",
+        "code_sha256": "f27c426661efe965c03096cd53be31bf55ed7599ddeb82403a10deaf27dd92d6"
+    },
+    "response_characters": 1404,
+    "code_characters": 1404
+}

@@ -1,57 +1,42 @@
 #include <LoRa_E32.h>
 
-#define LORA_RX 16
-#define LORA_TX 17
-#define LORA_AUX 5
-#define LORA_M0 18
-#define LORA_M1 19
-
-HardwareSerial SerialLora(2);
-LoRa_E32 lora(&SerialLora, LORA_AUX, LORA_M0, LORA_M1);
+HardwareSerial Serial2(2);
+LoRa_E32 e32(&Serial2, 5, 18, 19); // aux, m0, m1
 
 void setup() {
   Serial.begin(115200);
-  SerialLora.begin(9600, SERIAL_8N1, LORA_RX, LORA_TX);
-  delay(200);
-  if (lora.begin() != 0) {
-    Serial.println("LoRa begin error");
-    while (true);
-  }
+  Serial2.begin(9600, SERIAL_8N1, 16, 17);
+  delay(100);
+  e32.begin();
 
-  Configuration cfg;
-  cfg.ADDH = 0;
-  cfg.ADDL = 1;
-  cfg.CHAN = 13;
-  cfg.UART_BPS = UART_BPS_9600;
-  cfg.UART_PARITY = MODE_00_8N1;
-  cfg.AIR_DATA_RATE = AIR_DATA_RATE_010_24;
-  cfg.SUB_PACKET_SETTING = 0;
-  cfg.RSSI_EN = 0;
-  cfg.TRANSMIT_POWER = POWER_20;
-  cfg.LBT = 0;
-  cfg.WOR = WAKE_UP_250;
-  cfg.FEC = FEC_0_OFF;
-  cfg.IO_DRIVE_MODE = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+  E32Config cfg = {
+    0,                     // ADDH
+    1,                     // ADDL
+    13,                    // CHAN
+    UART_BPS_9600,         // UART baud rate
+    MODE_00_8N1,           // UART parity
+    AIR_DATA_RATE_010_24,  // Air data rate
+    WAKE_UP_250,           // Wireless wake-up time
+    IO_D_MODE_PUSH_PULLS_PULL_UPS, // I/O drive mode
+    FEC_0_OFF,             // FEC
+    POWER_20,              // Transmission power
+    FT_FIXED_TRANSMISSION // Fixed transmission mode
+  };
 
-  if (lora.setConfiguration(cfg) != 0) {
-    Serial.println("Set configuration error");
-    while (true);
-  }
-
-  lora.setMode(MODE_0_NORMAL);
+  e32.setConfiguration(cfg);
+  e32.setMode(NORMAL);
 }
 
 void loop() {
-  static unsigned long lastTime = 0;
-  if (millis() - lastTime >= 5000) {
-    lastTime = millis();
-    const char *msg = "teste_lora";
-    int ret = lora.sendFixedMessage(0, 3, 13, msg);
-    if (ret == 0) {
-      Serial.println("Transmission successful");
+  static unsigned long lastSend = 0;
+  if (millis() - lastSend >= 5000) {
+    lastSend = millis();
+    E32ResponseStruct response = e32.sendFixedMessage(0, 3, 13, "teste_lora");
+    if (response.status == 0) {
+      Serial.println("Transmissão bem-sucedida");
     } else {
-      Serial.print("Transmission error: ");
-      Serial.println(ret);
+      Serial.print("Erro na transmissão, código: ");
+      Serial.println(response.status);
     }
   }
 }
