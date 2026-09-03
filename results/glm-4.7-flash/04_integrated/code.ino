@@ -1,0 +1,119 @@
+#include <Wire.h>
+#include <Adafruit_BME280.h>
+#include <Adafruit_Sensor.h>
+#include <LoRa_E32.h>
+#include <esp_sleep.h>
+#include <esp_wifi.h>
+#include <esp32-hal-log.h>
+
+// DefiniÃ§Ãµes de Hardware
+#define SDA 21
+#define SCL 22
+#define RX_PIN 16
+#define TX_PIN 17
+#define AUX_PIN 5
+#define M0_PIN 18
+#define M1_PIN 19
+#define HIVE_SENSOR_PIN 4
+
+// ConfiguraÃ§Ãµes Globais
+Adafruit_BME280 bme;
+HardwareSerial Uart2(2);
+LoRa_E32 e32(&Uart2, AUX_PIN, M0_PIN, M1_PIN);
+uint8_t mac[6];
+int transmissionCounter = 0;
+
+void setup() {
+    Serial.begin(115200);
+    Wire.begin(SDA, SCL);
+    Uart2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+    delay(1000);
+
+    // ConfiguraÃ§Ã£o da CPU
+    setCpuFrequencyMhz(40);
+
+    // InicializaÃ§Ã£o BME280
+    if (!bme.begin(0x76)) {
+        Serial.println("Erro: BME280 nÃ£o encontrado");
+        while(1);
+    }
+
+    // ConfiguraÃ§Ã£o LoRa
+    Configuration config = Configuration();
+    config.ADDH = 0;
+    config.ADDL = 1;
+    config.CHAN = 13;
+    config.SPED.uartBaudRate = UART_BPS_9600;
+    config.SPED.airDataRate = AIR_DATA_RATE_010_24;
+    config.SPED.uartParity = MODE_00_8N1;
+    config.OPT.wirelessWakeUpTime = WAKE_UP_250;
+    config.OPT.ioDriveMode = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+    config.OPT.fec = FEC_0_OFF;
+    config.POWER = POWER_20;
+    config.TRANSMISSION_MODE = FT_FIXED_TRANSMISSION;
+
+    ResponseStatus status = e32.setModuleConfiguration(config);
+    if (status.code != 1) {
+        Serial.println("Erro: ConfiguraÃ§Ã£o LoRa falhou");
+        Serial.println(status.toString());
+        while(1);
+    }
+
+    e32.setMode(MODE_NORMAL);
+
+    // Obter MAC Address
+    esp_read_mac(mac, ESP_MAC_WIFI_STA);
+    char macStr[18];
+    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+    Serial.print("MAC: "); Serial.println(macStr);
+
+    // Configurar Wake Up Sources
+    // Timer: 60 minutos
+    esp_sleep_enable_timer_wakeup(60 * 60 * 1000000ULL);
+    // GPIO 4: Abertura da colmeia (HIGH)
+    esp_sleep_enable_ext0_wakeup(HIVE_SENSOR_PIN, HIGH);
+
+    Serial.println("Sistema pronto. Entrando em Deep Sleep.");
+    delay(1000);
+    esp_deep_sleep_start();
+}
+
+void loop() {
+    // Leitura de Sensores
+    float temp = bme.readTemperature();
+    float hum = bme.readHumidity();
+    float press = bme.readPressure() / 100.0F; // Converter para hPa
+    float alt = bme.readAltitude(1013.25);
+
+    // Leitura do Sensor MagnÃ©tico
+    int estado = digitalRead(HIVE_SENSOR_PIN);
+    String estadoStr = (estado == HIGH) ? "Aberta" : "Fechada";
+
+    // Montagem da Estrutura de Dados
+    char macStr[18];
+    sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+    String payload = "colmeia," + String(macStr) + "," + String(temp, 1) + "," + String(hum, 1) + "," + String(press, 1) + "," + String(alt, 1) + "," + estadoStr + "," + String(transmissionCounter);
+
+    // Envio LoRa
+    Message message;
+    message.frameHeader = 'B';
+    message.payload = payload.c_str();
+    message.length = payload.length() + 1;
+
+    ResponseStatus rs = e32.sendFixedMessage(0, 3, 13, message);
+
+    if (rs.success) {
+        Serial.println("Transmissao realizada com sucesso");
+    } else {
+        Serial.println("Erro na transmissao");
+        Serial.println(rs.toString());
+    }
+
+    // Atualizar Contador
+    transmissionCounter++;
+
+    // Modo de Baixo Consumo
+    e32.setMode(MODE_SLEEP);
+    esp_deep_sleep_start();
+}

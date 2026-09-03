@@ -1,0 +1,44 @@
+{
+    "model_developer": "Zhipu AI",
+    "api_provider": "Cloudflare Workers AI",
+    "requested_model": "@cf/zai-org/glm-4.7-flash",
+    "returned_model": "@cf/zai-org/glm-4.7-flash",
+    "task": "01_bme280",
+    "timestamp_utc": "2026-09-03T17:13:27.220559+00:00",
+    "prompt_file": "prompts/01_bme280.txt",
+    "response_id": "chatcmpl-8bc8ad0dccbabdcf",
+    "system_fingerprint": null,
+    "latency_seconds": 32.667734,
+    "first_content_latency_seconds": null,
+    "tokens": {
+        "input": 360,
+        "output": 2473,
+        "reasoning": null,
+        "cached": 0,
+        "total": 2833
+    },
+    "neurons": 91.9972,
+    "generation_config": {
+        "max_output_tokens": 16384,
+        "temperature": 0.0,
+        "reasoning_effort": "medium",
+        "stream": false
+    },
+    "raw_usage": {
+        "prompt_tokens": 360,
+        "completion_tokens": 2473,
+        "total_tokens": 2833,
+        "prompt_tokens_details": {
+            "cached_tokens": 0
+        },
+        "neurons": 91.9972
+    },
+    "integrity": {
+        "prompt_sha256": "c0659a1a8561a538bd7d4f533bd28e4576c69bf722632aee499064f606befa6a",
+        "response_sha256": "97176b147e43a5b19c13cfe6778b63be9d6a4af5b26189f0e5ae2619f78cf54a",
+        "code_sha256": "97176b147e43a5b19c13cfe6778b63be9d6a4af5b26189f0e5ae2619f78cf54a"
+    },
+    "prompt_characters": 1278,
+    "response_characters": 777,
+    "code_characters": 777
+}

@@ -1,0 +1,87 @@
+#include <LoRa_E32.h>
+#include <Arduino.h>
+
+// DefiniÃ§Ãµes de Hardware
+#define RX_PIN 16
+#define TX_PIN 17
+#define AUX_PIN 5
+#define M0_PIN 18
+#define M1_PIN 19
+
+// ConfiguraÃ§Ãµes Globais
+HardwareSerial Uart2(2);
+LoRa_E32 e32(&Uart2, AUX_PIN, M0_PIN, M1_PIN);
+
+void setup() {
+    Serial.begin(115200);
+    Uart2.begin(9600, SERIAL_8N1, RX_PIN, TX_PIN);
+    delay(1000);
+
+    // ConfiguraÃ§Ã£o do MÃ³dulo LoRa
+    Configuration config = Configuration();
+    config.ADDH = 0;
+    config.ADDL = 3;
+    config.CHAN = 13;
+    config.SPED.uartBaudRate = UART_BPS_9600;
+    config.SPED.airDataRate = AIR_DATA_RATE_010_24;
+    config.SPED.uartParity = MODE_00_8N1;
+    config.OPT.wirelessWakeUpTime = WAKE_UP_250;
+    config.OPT.ioDriveMode = IO_D_MODE_PUSH_PULLS_PULL_UPS;
+    config.OPT.fec = FEC_0_OFF;
+    config.POWER = POWER_20;
+    config.TRANSMISSION_MODE = FT_FIXED_TRANSMISSION;
+
+    ResponseStatus status = e32.setModuleConfiguration(config);
+    if (status.code != 1) {
+        Serial.println("Erro: ConfiguraÃ§Ã£o LoRa falhou");
+        Serial.println(status.toString());
+        while(1);
+    }
+
+    e32.setMode(MODE_NORMAL);
+    Serial.println("Receptor pronto.");
+}
+
+void loop() {
+    if (e32.available()) {
+        ResponseStructContainer rsc = e32.receiveMessage();
+        if (rsc.status.code == 1) {
+            String payload = rsc.message.payload;
+
+            if (payload.startsWith("colmeia,")) {
+                int comma1 = payload.indexOf(',');
+                int comma2 = payload.indexOf(',', comma1 + 1);
+                int comma3 = payload.indexOf(',', comma2 + 1);
+                int comma4 = payload.indexOf(',', comma3 + 1);
+                int comma5 = payload.indexOf(',', comma4 + 1);
+                int comma6 = payload.indexOf(',', comma5 + 1);
+                int comma7 = payload.indexOf(',', comma6 + 1);
+
+                String mac = payload.substring(comma1 + 1, comma2);
+                String tempStr = payload.substring(comma2 + 1, comma3);
+                String humStr = payload.substring(comma3 + 1, comma4);
+                String pressStr = payload.substring(comma4 + 1, comma5);
+                String altStr = payload.substring(comma5 + 1, comma6);
+                String stateStr = payload.substring(comma6 + 1, comma7);
+                String counterStr = payload.substring(comma7 + 1);
+
+                float temp = tempStr.toFloat();
+                float hum = humStr.toFloat();
+                float press = pressStr.toFloat();
+                float alt = altStr.toFloat();
+                int counter = counterStr.toInt();
+
+                Serial.println("MAC: " + mac);
+                Serial.print("Temperatura: "); Serial.print(temp, 2); Serial.println(" C");
+                Serial.print("Umidade: "); Serial.print(hum, 2); Serial.println(" %");
+                Serial.print("Pressao: "); Serial.print(press, 2); Serial.println(" hPa");
+                Serial.print("Altitude: "); Serial.print(alt, 2); Serial.println(" m");
+                Serial.print("Estado: "); Serial.println(stateStr);
+                Serial.print("Contador: "); Serial.println(counter);
+            }
+        } else {
+            Serial.println("Erro na recepÃ§Ã£o do pacote");
+            Serial.println(rsc.status.toString());
+        }
+    }
+}
