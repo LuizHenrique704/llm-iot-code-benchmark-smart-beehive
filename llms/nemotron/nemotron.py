@@ -22,7 +22,7 @@ MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 RESULT_MODEL_NAME = "nemotron-3-ultra-550b-a55b-free"
 
 MAX_OUTPUT_TOKENS = 16384
-
+TEMPERATURE = 0.0
 
 # ============================================================
 # LOCALIZAÇÃO DA RAIZ DO PROJETO
@@ -244,6 +244,8 @@ def run_llama(prompt: str):
             ],
 
             max_tokens=MAX_OUTPUT_TOKENS,
+
+            temperature=TEMPERATURE,
 
             stream=True,
 
@@ -618,6 +620,9 @@ def save_result(
 
             "max_output_tokens":
                 MAX_OUTPUT_TOKENS,
+
+            "temperature":
+                TEMPERATURE,
 
             "stream":
                 True,

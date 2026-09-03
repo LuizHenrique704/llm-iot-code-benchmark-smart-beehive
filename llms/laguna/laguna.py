@@ -24,6 +24,7 @@ MODEL = "poolside/laguna-s-2.1:free"
 RESULT_MODEL_NAME = "laguna-s-2.1-free"
 
 MAX_OUTPUT_TOKENS = 16384
+TEMPERATURE = 0.0
 
 # ============================================================
 # LOCALIZAÇÃO DA RAIZ DO PROJETO
@@ -306,6 +307,7 @@ def run_deepseek(
         }
     ],
     max_tokens=MAX_OUTPUT_TOKENS,
+    temperature=TEMPERATURE,
     stream=True,
 )
 
@@ -691,6 +693,7 @@ def save_result(
 
 "generation_config": {
     "max_output_tokens": MAX_OUTPUT_TOKENS,
+    "temperature": TEMPERATURE,
     "stream": True,
 },
 

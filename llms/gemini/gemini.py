@@ -22,6 +22,7 @@ MODEL = "gemini-3.8-flash"
 
 THINKING_LEVEL = "medium"
 MAX_OUTPUT_TOKENS = 16384
+TEMPERATURE = 0.0
 
 
 # ============================================================
@@ -77,6 +78,7 @@ GENERATION_CONFIG = types.GenerateContentConfig(
         thinking_level=THINKING_LEVEL
     ),
     max_output_tokens=MAX_OUTPUT_TOKENS,
+    temperature=TEMPERATURE,
 )
 
 
@@ -484,6 +486,9 @@ def save_result(
 
             "max_output_tokens":
                 MAX_OUTPUT_TOKENS,
+
+            "temperature":
+                TEMPERATURE,
         },
 
         # ----------------------------------------------------

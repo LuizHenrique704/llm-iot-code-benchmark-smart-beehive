@@ -21,22 +21,14 @@ API_PROVIDER = "Cloudflare Workers AI"
 
 MODEL = "@cf/zai-org/glm-4.7-flash"
 
-# Nome utilizado dentro de results/
 RESULT_MODEL_NAME = "glm-4.7-flash"
 
-# Mesmo limite utilizado nos outros modelos
 MAX_OUTPUT_TOKENS = 16384
 
-# Padronização da aleatoriedade.
-# Depois devemos aplicar o mesmo valor aos outros modelos
-# sempre que a API suportar.
+# Vamos posteriormente padronizar os outros modelos também.
 TEMPERATURE = 0.0
 
-# GLM suporta controle de reasoning.
 REASONING_EFFORT = "medium"
-
-# Timeout máximo da requisição
-REQUEST_TIMEOUT_SECONDS = 300
 
 
 # ============================================================
@@ -44,20 +36,6 @@ REQUEST_TIMEOUT_SECONDS = 300
 # ============================================================
 
 def find_project_root() -> Path:
-    """
-    Localiza automaticamente a raiz do projeto.
-
-    Estrutura esperada:
-
-    projeto/
-    ├── .env
-    ├── prompts/
-    ├── results/
-    └── llms/
-        └── glm/
-            └── glm.py
-    """
-
     current = Path(__file__).resolve().parent
 
     for directory in [current, *current.parents]:
@@ -92,20 +70,12 @@ RESULTS_DIR = PROJECT_ROOT / "results"
 # ============================================================
 
 def sha256_text(text: str) -> str:
-    """
-    Calcula SHA-256 do texto.
-    """
-
     return hashlib.sha256(
         text.encode("utf-8")
     ).hexdigest()
 
 
 def read_prompt(path: Path) -> str:
-    """
-    Lê um arquivo de prompt.
-    """
-
     if not path.exists():
 
         print()
@@ -121,13 +91,9 @@ def read_prompt(path: Path) -> str:
 
 def extract_code(response: str) -> str:
     """
-    Extrai código Arduino caso a LLM responda dentro de:
+    Extrai código caso a resposta venha dentro de Markdown.
 
-    ```cpp
-    ...
-    ```
-
-    response.txt permanece com a resposta original da LLM.
+    response.txt permanece com a resposta original.
     code.ino recebe apenas o código.
     """
 
@@ -145,20 +111,12 @@ def extract_code(response: str) -> str:
     )
 
     if match:
-        return (
-            match
-            .group(1)
-            .strip()
-        )
+        return match.group(1).strip()
 
     return response
 
 
 def relative_path(path: Path) -> str:
-    """
-    Retorna o caminho relativo à raiz do projeto.
-    """
-
     try:
         return str(
             path.relative_to(
@@ -176,25 +134,14 @@ def relative_path(path: Path) -> str:
 
 def run_glm(prompt: str):
     """
-    Executa GLM-4.7-Flash através da REST API direta
-    do Cloudflare Workers AI.
+    Executa GLM-4.7-Flash diretamente pela REST API
+    da Cloudflare usando streaming SSE.
 
-    Não utiliza streaming devido aos erros de
-    incomplete chunked read observados durante os testes.
-
-    Retorna:
-    - conteúdo da resposta
-    - usage
-    - latência total
-    - latência até primeiro conteúdo
-    - response_id
-    - modelo retornado
-    - system fingerprint
+    O reasoning do modelo é ignorado.
+    Apenas message.content é armazenado.
     """
 
-    load_dotenv(
-        ENV_FILE
-    )
+    load_dotenv(ENV_FILE)
 
     account_id = os.getenv(
         "CLOUDFLARE_ACCOUNT_ID"
@@ -204,28 +151,20 @@ def run_glm(prompt: str):
         "CLOUDFLARE_API_TOKEN"
     )
 
-    # ========================================================
-    # VALIDA CREDENCIAIS
-    # ========================================================
-
     if not account_id:
-
         print()
         print(
             "ERRO: CLOUDFLARE_ACCOUNT_ID "
             "não encontrado no .env"
         )
-
         sys.exit(1)
 
     if not api_token:
-
         print()
         print(
             "ERRO: CLOUDFLARE_API_TOKEN "
             "não encontrado no .env"
         )
-
         sys.exit(1)
 
     # ========================================================
@@ -238,18 +177,12 @@ def run_glm(prompt: str):
     )
 
     headers = {
-    "Authorization": f"Bearer {api_token}",
-    "Content-Type": "application/json",
-    "Accept": "application/json",
-    "Connection": "close",
-}
-
-    # ========================================================
-    # PAYLOAD
-    # ========================================================
+        "Authorization": f"Bearer {api_token}",
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+    }
 
     payload = {
-
         "messages": [
             {
                 "role": "user",
@@ -267,153 +200,334 @@ def run_glm(prompt: str):
             REASONING_EFFORT,
 
         "stream":
-            False,
+            True,
     }
 
     # ========================================================
-    # CHAMADA DA API
+    # VARIÁVEIS
     # ========================================================
 
-    start_time = (
-        time.perf_counter()
+    response_parts = []
+
+    usage = {}
+
+    response_id = None
+    returned_model = None
+    system_fingerprint = None
+
+    first_content_time = None
+
+    start_time = time.perf_counter()
+
+    print(
+        "Aguardando conexão com a Cloudflare...",
+        flush=True
     )
 
-    response = requests.post(
-    url,
-    headers=headers,
-    json=payload,
-    timeout=(30, 300),
-)
-
-    end_time = (
-        time.perf_counter()
-    )
-
     # ========================================================
-    # VALIDA HTTP
-    # ========================================================
-
-    if not response.ok:
-
-        raise RuntimeError(
-            f"HTTP {response.status_code}: "
-            f"{response.text}"
-        )
-
-    # ========================================================
-    # DECODIFICA JSON
+    # REQUISIÇÃO
     # ========================================================
 
     try:
 
-        data = response.json()
+        with requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            stream=True,
 
-    except requests.exceptions.JSONDecodeError:
+            # 30 s para conectar
+            # 300 s esperando entre dados recebidos
+            timeout=(30, 300),
 
-        raise RuntimeError(
-            "A Cloudflare retornou uma resposta "
-            "que não é JSON válido."
-        )
+        ) as response:
 
-    # ========================================================
-    # VALIDA RESPOSTA CLOUDFLARE
-    # ========================================================
+            # =================================================
+            # ERRO HTTP
+            # =================================================
 
-    if not data.get(
-        "success",
-        False
-    ):
+            if not response.ok:
 
-        raise RuntimeError(
-            "Cloudflare retornou erro: "
-            f"{data}"
-        )
+                raise RuntimeError(
+                    f"HTTP {response.status_code}: "
+                    f"{response.text}"
+                )
 
-    result = data.get(
-        "result",
-        {}
-    )
-
-    if not result:
-
-        raise RuntimeError(
-            "Cloudflare retornou success=true, "
-            "mas result está vazio."
-        )
-
-    # ========================================================
-    # CONTEÚDO
-    # ========================================================
-
-    response_text = ""
-
-    choices = result.get(
-        "choices",
-        []
-    )
-
-    if choices:
-
-        message = (
-            choices[0]
-            .get(
-                "message",
-                {}
+            print(
+                f"Conexão estabelecida "
+                f"(HTTP {response.status_code}).",
+                flush=True
             )
-        )
 
-        # Pegamos apenas o conteúdo final.
-        #
-        # Não incluímos:
-        # reasoning
-        # reasoning_content
-        #
-        # Isso evita inserir raciocínio interno no code.ino.
-        response_text = (
-            message.get(
-                "content",
-                ""
+            print(
+                "Gerando resposta...",
+                flush=True
             )
-            or ""
-        )
+
+            # =================================================
+            # LEITURA DO STREAM SSE
+            # =================================================
+
+            for raw_line in response.iter_lines(
+                chunk_size=1,
+                decode_unicode=True,
+            ):
+
+                if not raw_line:
+                    continue
+
+                line = raw_line.strip()
+
+                # SSE:
+                #
+                # data: {...}
+                # data: [DONE]
+
+                if not line.startswith("data:"):
+                    continue
+
+                event_data = (
+                    line[len("data:"):]
+                    .strip()
+                )
+
+                # =================================================
+                # FIM DO STREAM
+                # =================================================
+
+                if event_data == "[DONE]":
+
+                    print()
+                    print(
+                        "Streaming finalizado.",
+                        flush=True
+                    )
+
+                    break
+
+                # =================================================
+                # JSON
+                # =================================================
+
+                try:
+
+                    chunk = json.loads(
+                        event_data
+                    )
+
+                except json.JSONDecodeError:
+
+                    continue
+
+                # Algumas respostas podem vir encapsuladas.
+                if (
+                    isinstance(chunk, dict)
+                    and "result" in chunk
+                    and isinstance(
+                        chunk["result"],
+                        dict
+                    )
+                ):
+                    chunk = chunk["result"]
+
+                if not isinstance(
+                    chunk,
+                    dict
+                ):
+                    continue
+
+                # =================================================
+                # ID
+                # =================================================
+
+                chunk_id = chunk.get(
+                    "id"
+                )
+
+                if chunk_id:
+                    response_id = chunk_id
+
+                # =================================================
+                # MODELO
+                # =================================================
+
+                chunk_model = chunk.get(
+                    "model"
+                )
+
+                if chunk_model:
+                    returned_model = (
+                        chunk_model
+                    )
+
+                # =================================================
+                # SYSTEM FINGERPRINT
+                # =================================================
+
+                fingerprint = chunk.get(
+                    "system_fingerprint"
+                )
+
+                if fingerprint is not None:
+                    system_fingerprint = (
+                        fingerprint
+                    )
+
+                # =================================================
+                # USAGE
+                # =================================================
+
+                chunk_usage = chunk.get(
+                    "usage"
+                )
+
+                if isinstance(
+                    chunk_usage,
+                    dict
+                ):
+                    usage = chunk_usage
+
+                # =================================================
+                # CHOICES
+                # =================================================
+
+                choices = chunk.get(
+                    "choices",
+                    []
+                )
+
+                if not choices:
+                    continue
+
+                first_choice = choices[0]
+
+                if not isinstance(
+                    first_choice,
+                    dict
+                ):
+                    continue
+
+                delta = first_choice.get(
+                    "delta",
+                    {}
+                )
+
+                if not isinstance(
+                    delta,
+                    dict
+                ):
+                    continue
+
+                # =================================================
+                # CONTEÚDO
+                #
+                # Não armazenamos:
+                # - reasoning
+                # - reasoning_content
+                # =================================================
+
+                content = delta.get(
+                    "content"
+                )
+
+                if not content:
+                    continue
+
+                # =================================================
+                # PRIMEIRO CONTEÚDO
+                # =================================================
+
+                if first_content_time is None:
+
+                    first_content_time = (
+                        time.perf_counter()
+                    )
+
+                    print(
+                        "Primeiro conteúdo recebido.",
+                        flush=True
+                    )
+
+                    print(
+                        "Recebendo resposta: ",
+                        end="",
+                        flush=True
+                    )
+
+                # Apenas indicador visual.
+                # Não entra no resultado salvo.
+                print(
+                    ".",
+                    end="",
+                    flush=True
+                )
+
+                response_parts.append(
+                    content
+                )
 
     # ========================================================
-    # USAGE
+    # ERROS DE REDE
     # ========================================================
 
-    usage = result.get(
-        "usage",
-        {}
+    except requests.exceptions.ConnectTimeout as error:
+
+        raise RuntimeError(
+            "Timeout ao conectar com a Cloudflare."
+        ) from error
+
+    except requests.exceptions.ReadTimeout as error:
+
+        raise RuntimeError(
+            "Timeout aguardando dados da Cloudflare."
+        ) from error
+
+    except requests.exceptions.ChunkedEncodingError as error:
+
+        raise RuntimeError(
+            "A Cloudflare encerrou o streaming "
+            "antes de completar a resposta."
+        ) from error
+
+    except requests.exceptions.ConnectionError as error:
+
+        raise RuntimeError(
+            "A conexão com a Cloudflare foi encerrada."
+        ) from error
+
+    # ========================================================
+    # TEMPO FINAL
+    # ========================================================
+
+    end_time = time.perf_counter()
+
+    # ========================================================
+    # RESPOSTA COMPLETA
+    # ========================================================
+
+    response_text = "".join(
+        response_parts
     )
-
-    # ========================================================
-    # IDENTIFICADORES
-    # ========================================================
-
-    response_id = result.get(
-        "id"
-    )
-
-    returned_model = result.get(
-        "model"
-    )
-
-    system_fingerprint = result.get(
-        "system_fingerprint"
-    )
-
-    # ========================================================
-    # LATÊNCIA
-    # ========================================================
 
     total_latency = (
         end_time
         - start_time
     )
 
-    # Sem streaming não conseguimos medir
-    # o tempo até o primeiro token.
-    first_content_latency = None
+    # ========================================================
+    # LATÊNCIA ATÉ PRIMEIRO CONTEÚDO
+    # ========================================================
+
+    if first_content_time is not None:
+
+        first_content_latency = (
+            first_content_time
+            - start_time
+        )
+
+    else:
+
+        first_content_latency = None
 
     return (
         response_text,
@@ -442,14 +556,6 @@ def save_result(
     returned_model,
     system_fingerprint,
 ):
-    """
-    Salva:
-
-    prompt.txt
-    response.txt
-    code.ino
-    metadata.json
-    """
 
     result_dir = (
         RESULTS_DIR
@@ -495,7 +601,7 @@ def save_result(
     )
 
     # ========================================================
-    # SALVA PROMPT
+    # PROMPT
     # ========================================================
 
     prompt_output.write_text(
@@ -504,7 +610,7 @@ def save_result(
     )
 
     # ========================================================
-    # SALVA RESPOSTA ORIGINAL DA LLM
+    # RESPOSTA
     # ========================================================
 
     response_output.write_text(
@@ -513,7 +619,7 @@ def save_result(
     )
 
     # ========================================================
-    # SALVA CÓDIGO EXTRAÍDO
+    # CÓDIGO
     # ========================================================
 
     code_output.write_text(
@@ -537,10 +643,13 @@ def save_result(
         "total_tokens"
     )
 
-    prompt_details = usage.get(
-        "prompt_tokens_details",
-        {}
-    ) or {}
+    prompt_details = (
+        usage.get(
+            "prompt_tokens_details",
+            {}
+        )
+        or {}
+    )
 
     cached_tokens = (
         prompt_details.get(
@@ -548,9 +657,8 @@ def save_result(
         )
     )
 
-    # A Cloudflare atualmente não fornece
-    # separadamente reasoning_tokens no mesmo
-    # formato dos outros provedores.
+    # Cloudflare não necessariamente fornece
+    # reasoning_tokens separadamente.
     reasoning_tokens = None
 
     # ========================================================
@@ -562,7 +670,7 @@ def save_result(
     )
 
     # ========================================================
-    # METADADOS
+    # METADATA
     # ========================================================
 
     metadata = {
@@ -642,14 +750,14 @@ def save_result(
         },
 
         # ----------------------------------------------------
-        # MÉTRICA CLOUDFLARE
+        # CLOUDFLARE
         # ----------------------------------------------------
 
         "neurons":
             neurons,
 
         # ----------------------------------------------------
-        # CONFIGURAÇÃO DA GERAÇÃO
+        # CONFIGURAÇÃO
         # ----------------------------------------------------
 
         "generation_config": {
@@ -664,18 +772,18 @@ def save_result(
                 REASONING_EFFORT,
 
             "stream":
-                False,
+                True,
         },
 
         # ----------------------------------------------------
-        # USAGE COMPLETO
+        # USAGE BRUTO
         # ----------------------------------------------------
 
         "raw_usage":
             usage,
 
         # ----------------------------------------------------
-        # INTEGRIDADE
+        # HASHES
         # ----------------------------------------------------
 
         "integrity": {
@@ -697,7 +805,7 @@ def save_result(
         },
 
         # ----------------------------------------------------
-        # TAMANHOS
+        # TAMANHO
         # ----------------------------------------------------
 
         "prompt_characters":
@@ -771,14 +879,12 @@ def main():
     args = parser.parse_args()
 
     # ========================================================
-    # LOCALIZA PROMPT
+    # PROMPT
     # ========================================================
 
     if args.prompt:
 
-        prompt_path = (
-            args.prompt
-        )
+        prompt_path = args.prompt
 
         if not prompt_path.is_absolute():
 
@@ -793,10 +899,6 @@ def main():
             PROMPTS_DIR
             / f"{args.task}.txt"
         )
-
-    # ========================================================
-    # LÊ PROMPT
-    # ========================================================
 
     prompt = read_prompt(
         prompt_path
@@ -853,11 +955,12 @@ def main():
     )
 
     print(
-        "Enviando prompt..."
+        "Enviando prompt...",
+        flush=True
     )
 
     # ========================================================
-    # CHAMADA
+    # API
     # ========================================================
 
     try:
@@ -886,14 +989,10 @@ def main():
         print(error)
 
         # Sem retry automático.
-        #
-        # Erros de API/infraestrutura não devem
-        # gerar automaticamente uma nova geração.
-
         sys.exit(1)
 
     # ========================================================
-    # VALIDA CONTEÚDO
+    # RESPOSTA VAZIA
     # ========================================================
 
     if not response_text.strip():
@@ -981,7 +1080,7 @@ def main():
 
     print(
         "Latência até primeiro conteúdo: "
-        f"{metadata['first_content_latency_seconds']}"
+        f"{metadata['first_content_latency_seconds']} s"
     )
 
     print()

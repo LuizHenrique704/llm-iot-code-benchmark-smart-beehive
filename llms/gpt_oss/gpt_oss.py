@@ -26,6 +26,7 @@ RESULT_MODEL_NAME = "gpt-oss-120b"
 
 # Limite máximo que permitimos para uma resposta.
 MAX_OUTPUT_TOKENS = 16384
+TEMPERATURE = 0.0
 
 # GPT-OSS suporta:
 # low
@@ -303,6 +304,10 @@ def run_gpt_oss(prompt: str):
 
                 max_completion_tokens=(
                     MAX_OUTPUT_TOKENS
+                ),
+
+                temperature=(
+                    TEMPERATURE
                 ),
 
                 reasoning_effort=(
@@ -766,6 +771,9 @@ def save_result(
 
             "max_output_tokens":
                 MAX_OUTPUT_TOKENS,
+
+            "temperature":
+                TEMPERATURE,
 
             "reasoning_effort":
                 REASONING_EFFORT,
