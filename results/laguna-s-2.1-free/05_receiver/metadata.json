@@ -1,0 +1,64 @@
+{
+    "model_developer": "Poolside",
+    "api_provider": "OpenRouter",
+    "requested_model": "poolside/laguna-s-2.1:free",
+    "returned_model": "poolside/laguna-s-2.1:free",
+    "task": "05_receiver",
+    "timestamp_utc": "2026-09-03T12:42:13.897544+00:00",
+    "prompt_file": "results/laguna-s-2.1-free/05_receiver/prompt_generated.txt",
+    "response_id": "gen-1788439096-CS3CkdAv1s4i6cTo2b09",
+    "latency_seconds": 238.385589,
+    "first_content_latency_seconds": 228.236989,
+    "tokens": {
+        "input": 1769,
+        "output": 13396,
+        "reasoning": 12504,
+        "cached": 32,
+        "total": 15165
+    },
+    "cost": 0,
+    "cost_details": {
+        "upstream_inference_cost": 0,
+        "upstream_inference_prompt_cost": 0,
+        "upstream_inference_completions_cost": 0
+    },
+    "generation_config": {
+        "max_output_tokens": 16384,
+        "stream": true
+    },
+    "raw_usage": {
+        "completion_tokens": 13396,
+        "prompt_tokens": 1769,
+        "total_tokens": 15165,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": null,
+            "audio_tokens": 0,
+            "reasoning_tokens": 12504,
+            "rejected_prediction_tokens": null,
+            "text_tokens": null,
+            "image_tokens": 0
+        },
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 32,
+            "image_tokens": null,
+            "text_tokens": null,
+            "video_tokens": 0
+        },
+        "cost": 0,
+        "is_byok": false,
+        "cost_details": {
+            "upstream_inference_cost": 0,
+            "upstream_inference_prompt_cost": 0,
+            "upstream_inference_completions_cost": 0
+        }
+    },
+    "integrity": {
+        "prompt_sha256": "fe232bb9bec24833e48d16200139ff21f8c843a9bd8252d660a088635dff8869",
+        "response_sha256": "1156e98f6720baa797d8e02c5746180c6f1cdb22b8e347f3910734d9f50dc90a",
+        "code_sha256": "ebfde949a9adbc8f61f0efbe332e6615822257c2d5b2c943a960efc39d236938"
+    },
+    "response_characters": 2724,
+    "code_characters": 2713
+}

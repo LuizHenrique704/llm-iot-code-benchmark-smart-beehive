@@ -1,0 +1,96 @@
+#include <LoRa_E32.h>
+#include <HardwareSerial.h>
+
+#define UART_RX 16
+#define UART_TX 17
+#define M0_PIN 18
+#define M1_PIN 19
+#define AUX_PIN 5
+
+HardwareSerial uart2(2);
+LoRa_E32 e32ttl(&uart2, AUX_PIN, M0_PIN, M1_PIN);
+
+typedef struct __attribute__((packed)) {
+    char identifier[8];
+    uint8_t mac[6];
+    float temperature;
+    float humidity;
+    float pressure;
+    float altitude;
+    uint8_t hiveState;
+    uint32_t transmissions;
+} TelemetryData;
+
+TelemetryData currentData;
+
+void setup() {
+    Serial.begin(115200);
+    delay(100);
+
+    uart2.begin(9600, SERIAL_8N1, UART_RX, UART_TX);
+    delay(100);
+
+    e32ttl.setMode(MODE_CONFIG);
+    e32ttl.setAddH(0);
+    e32ttl.setAddL(3);
+    e32ttl.setChan(13);
+    e32ttl.setUARTbaud(UART_BPS_9600);
+    e32ttl.setUARTparity(MODE_00_8N1);
+    e32ttl.setAirdatarate(AIR_DATA_RATE_010_24);
+    e32ttl.setWakeup(WAKE_UP_250);
+    e32ttl.setIO_Mode(IO_D_MODE_PUSH_PULLS_PULL_UPS);
+    e32ttl.setFEC(FEC_0_OFF);
+    e32ttl.setPower(POWER_20);
+    e32ttl.setFixedTransmission(FT_FIXED_TRANSMISSION);
+    e32ttl.saveParams();
+    e32ttl.setMode(MODE_NORMAL);
+    e32ttl.receiveInit();
+}
+
+void loop() {
+    static uint8_t buffer[5 + sizeof(TelemetryData)];
+    uint8_t len = 0;
+
+    if (e32ttl.readData(buffer, &len) == 0 && len == 5 + sizeof(TelemetryData)) {
+        TelemetryData receivedData;
+        memcpy(&receivedData, buffer + 5, sizeof(TelemetryData));
+
+        if (strcmp(receivedData.identifier, "colmeia") == 0) {
+            currentData = receivedData;
+            printData();
+        }
+    } else {
+        if (len != 0 || e32ttl.getMode() == MODE_NORMAL) {
+            Serial.println("Erro na recepção do pacote.");
+        }
+    }
+}
+
+void printData() {
+    char macStr[18];
+    snprintf(macStr, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
+            currentData.mac[0], currentData.mac[1], currentData.mac[2],
+            currentData.mac[3], currentData.mac[4], currentData.mac[5]);
+
+    const char* stateStr = (currentData.hiveState == 1) ? "ABERTA" : "FECHADA";
+
+    Serial.println("------------------------------------------------------------");
+    Serial.print("MAC: ");
+    Serial.println(macStr);
+    Serial.print("Temperatura: ");
+    Serial.print(currentData.temperature, 2);
+    Serial.println(" C");
+    Serial.print("Umidade: ");
+    Serial.print(currentData.humidity, 2);
+    Serial.println(" %");
+    Serial.print("Pressao: ");
+    Serial.print(currentData.pressure, 2);
+    Serial.println(" hPa");
+    Serial.print("Altitude: ");
+    Serial.print(currentData.altitude, 2);
+    Serial.println(" m");
+    Serial.print("Estado: ");
+    Serial.println(stateStr);
+    Serial.print("Contador: ");
+    Serial.println(currentData.transmissions);
+}
